@@ -1,0 +1,97 @@
+# ──────────────────────────────────────────────────────────────────────
+# NauroLabs — SWA Deploy Template
+#
+# Quality-gated CI/CD for Azure Static Web Apps projects.
+# Copy into your project's .github/workflows/ and customize:
+#   - SWA token secret name
+#   - app_location / api_location / output_location
+#   - Project display name in Telegram notifications
+#
+# Pattern: install → lint → typecheck → test → build → deploy → notify
+# ──────────────────────────────────────────────────────────────────────
+name: CI/CD
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    branches: [main, master]
+
+jobs:
+  # ── Quality Gate ────────────────────────────────────────────────────
+  quality:
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Test
+        run: npm test
+
+  # ── Build & Deploy ─────────────────────────────────────────────────
+  deploy:
+    needs: quality
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+    runs-on: ubuntu-latest
+    name: Build and Deploy
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          lfs: false
+
+      - name: Build And Deploy
+        id: builddeploy
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_SWA_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          app_location: "/"            # ← customize per project
+          api_location: "api"          # ← customize per project
+          output_location: "dist"      # ← customize per project
+          # api_build_command: "npm install && npm run build"  # ← uncomment if API needs separate build
+
+      - name: Notify Telegram (success)
+        if: success() && github.event_name == 'push'
+        run: |
+          COMMIT_MSG=$(echo "${{ github.event.head_commit.message }}" | head -1)
+          curl -sf -X POST "${{ secrets.TELEGRAM_NOTIFY_URL }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"message\": \"✅ PROJECT_NAME deployed\\n\\nBranch: ${{ github.ref_name }}\\nCommit: ${COMMIT_MSG}\\nSHA: ${{ github.sha }}\"}" \
+            || echo "::warning::Telegram notification failed"
+
+      - name: Notify Telegram (failure)
+        if: failure() && github.event_name == 'push'
+        run: |
+          COMMIT_MSG=$(echo "${{ github.event.head_commit.message }}" | head -1)
+          curl -sf -X POST "${{ secrets.TELEGRAM_NOTIFY_URL }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"message\": \"❌ PROJECT_NAME deploy FAILED\\n\\nBranch: ${{ github.ref_name }}\\nCommit: ${COMMIT_MSG}\\nCheck: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            || echo "::warning::Telegram notification failed"
+
+  # ── Close PR preview ───────────────────────────────────────────────
+  close_pull_request:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Close Pull Request
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_SWA_TOKEN }}
+          action: close

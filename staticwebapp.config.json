@@ -1,0 +1,15 @@
+{
+  "trailingSlash": "auto",
+  "platform": { "apiRuntime": "node:20" },
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": ["/images/*", "/css/*", "/assets/*", "/api/*"]
+  },
+  "globalHeaders": {
+    "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=()"
+  }
+}
