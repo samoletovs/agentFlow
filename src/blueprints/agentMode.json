@@ -1,0 +1,183 @@
+{
+  "version": "1.0",
+  "project": "agentMode",
+  "agent": "orchestrator",
+  "summary": "A multi-channel personal assistant: Telegram and Slack bots with modular skills, an LLM orchestrator that dispatches tools, and Container App Jobs for browser RPA.",
+  "tags": ["personal", "telegram", "slack", "playwright", "multi-skill"],
+  "stack": [
+    "azure-functions",
+    "azure-openai",
+    "azure-table-storage",
+    "azure-keyvault",
+    "azure-container-apps",
+    "playwright"
+  ],
+  "telemetry": {
+    "appInsights": true,
+    "tracerName": "agentMode.functions"
+  },
+  "nodes": [
+    {
+      "id": "telegram_user",
+      "kind": "channel",
+      "label": "Telegram",
+      "detail": "Allowlisted chat",
+      "private": true
+    },
+    {
+      "id": "slack_user",
+      "kind": "channel",
+      "label": "Slack",
+      "detail": "Personal workspace",
+      "private": true
+    },
+    {
+      "id": "http_trigger",
+      "kind": "trigger",
+      "label": "HTTP trigger",
+      "detail": "POST /api/telegram, /api/slack"
+    },
+    {
+      "id": "queue_trigger",
+      "kind": "trigger",
+      "label": "Queue trigger",
+      "detail": "Background work"
+    },
+    {
+      "id": "timer_trigger",
+      "kind": "trigger",
+      "label": "Timer triggers",
+      "detail": "daily_digest · reminders"
+    },
+    {
+      "id": "function_app",
+      "kind": "compute",
+      "label": "Function App",
+      "detail": "Flex Consumption · Python 3.11",
+      "resource": "func-agents-s6vbks3oteo4y"
+    },
+    {
+      "id": "orchestrator",
+      "kind": "compute",
+      "label": "Orchestrator",
+      "detail": "LLM tool-dispatch · multi-turn"
+    },
+    {
+      "id": "tool_registry",
+      "kind": "compute",
+      "label": "Tool registry",
+      "detail": "@tool decorator · skill auto-discovery"
+    },
+    {
+      "id": "skills",
+      "kind": "tool",
+      "label": "Skills (21)",
+      "detail": "weather · electricity · reminders · property_search · venden · web_search · …"
+    },
+    {
+      "id": "azure_openai",
+      "kind": "agent",
+      "label": "Azure OpenAI",
+      "detail": "gpt-4o-mini · o4-mini for reasoning"
+    },
+    {
+      "id": "memory_store",
+      "kind": "data",
+      "label": "Memory store",
+      "detail": "Azure Table Storage · conversation state",
+      "private": true
+    },
+    {
+      "id": "key_vault",
+      "kind": "secret",
+      "label": "Key Vault",
+      "detail": "Telegram + Slack + 3rd-party tokens"
+    },
+    {
+      "id": "water_order_job",
+      "kind": "job",
+      "label": "water-order job",
+      "detail": "Container App Job · Playwright + AI vision",
+      "resource": "ca-water-order"
+    },
+    {
+      "id": "venden_site",
+      "kind": "tool",
+      "label": "Venden web",
+      "detail": "Latvian water delivery portal"
+    },
+    {
+      "id": "github_repo",
+      "kind": "repo",
+      "label": "samoletovs/agentMode",
+      "detail": "Private + dev-task issues",
+      "url": "https://github.com/samoletovs/agentMode"
+    },
+    {
+      "id": "app_insights",
+      "kind": "data",
+      "label": "Application Insights",
+      "detail": "Per-skill traces"
+    }
+  ],
+  "flows": [
+    {
+      "id": "telegram_chat",
+      "label": "Telegram chat",
+      "trigger": "User message",
+      "steps": [
+        { "from": "telegram_user", "to": "http_trigger", "label": "webhook" },
+        { "from": "http_trigger", "to": "function_app", "label": "dispatch" },
+        { "from": "function_app", "to": "memory_store", "label": "load history" },
+        { "from": "function_app", "to": "orchestrator", "label": "plan turn" },
+        { "from": "orchestrator", "to": "azure_openai", "label": "complete" },
+        { "from": "azure_openai", "to": "orchestrator", "label": "tool call" },
+        { "from": "orchestrator", "to": "tool_registry", "label": "resolve" },
+        { "from": "tool_registry", "to": "skills", "label": "invoke" },
+        { "from": "skills", "to": "orchestrator", "label": "result" },
+        { "from": "orchestrator", "to": "function_app", "label": "reply" },
+        { "from": "function_app", "to": "memory_store", "label": "persist" },
+        { "from": "function_app", "to": "telegram_user", "label": "sendMessage" }
+      ]
+    },
+    {
+      "id": "slack_chat",
+      "label": "Slack chat",
+      "trigger": "User message",
+      "steps": [
+        { "from": "slack_user", "to": "http_trigger", "label": "events API" },
+        { "from": "http_trigger", "to": "function_app", "label": "dispatch" },
+        { "from": "function_app", "to": "orchestrator", "label": "plan turn" },
+        { "from": "orchestrator", "to": "azure_openai", "label": "complete" },
+        { "from": "orchestrator", "to": "skills", "label": "tools" },
+        { "from": "function_app", "to": "slack_user", "label": "post message" }
+      ]
+    },
+    {
+      "id": "daily_digest",
+      "label": "Daily digest",
+      "trigger": "Timer (every morning)",
+      "steps": [
+        { "from": "timer_trigger", "to": "function_app", "label": "fires" },
+        { "from": "function_app", "to": "skills", "label": "daily_digest skill" },
+        { "from": "skills", "to": "azure_openai", "label": "summarize" },
+        { "from": "function_app", "to": "telegram_user", "label": "send digest" }
+      ]
+    },
+    {
+      "id": "water_order",
+      "label": "Order water (water-order RPA)",
+      "trigger": "Telegram intent or scheduled",
+      "steps": [
+        { "from": "telegram_user", "to": "function_app", "label": "intent" },
+        { "from": "function_app", "to": "queue_trigger", "label": "enqueue" },
+        { "from": "queue_trigger", "to": "water_order_job", "label": "start job" },
+        { "from": "water_order_job", "to": "key_vault", "label": "fetch venden creds" },
+        { "from": "water_order_job", "to": "azure_openai", "label": "vision: confirm UI" },
+        { "from": "water_order_job", "to": "venden_site", "label": "submit order" },
+        { "from": "water_order_job", "to": "function_app", "label": "result" },
+        { "from": "function_app", "to": "telegram_user", "label": "confirmation" }
+      ]
+    }
+  ]
+}

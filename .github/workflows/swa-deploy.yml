@@ -62,10 +62,10 @@ jobs:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_SWA_TOKEN }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: upload
-          app_location: "/"            # ← customize per project
-          api_location: "api"          # ← customize per project
-          output_location: "dist"      # ← customize per project
-          # api_build_command: "npm install && npm run build"  # ← uncomment if API needs separate build
+          app_location: "/"
+          api_location: "api"
+          output_location: "dist"
+          api_build_command: "npm install && npm run build"
 
       - name: Notify Telegram (success)
         if: success() && github.event_name == 'push'
@@ -73,7 +73,7 @@ jobs:
           COMMIT_MSG=$(echo "${{ github.event.head_commit.message }}" | head -1)
           curl -sf -X POST "${{ secrets.TELEGRAM_NOTIFY_URL }}" \
             -H "Content-Type: application/json" \
-            -d "{\"message\": \"✅ PROJECT_NAME deployed\\n\\nBranch: ${{ github.ref_name }}\\nCommit: ${COMMIT_MSG}\\nSHA: ${{ github.sha }}\"}" \
+            -d "{\"message\": \"✅ agentFlow deployed\\n\\nBranch: ${{ github.ref_name }}\\nCommit: ${COMMIT_MSG}\\nSHA: ${{ github.sha }}\"}" \
             || echo "::warning::Telegram notification failed"
 
       - name: Notify Telegram (failure)
@@ -82,7 +82,7 @@ jobs:
           COMMIT_MSG=$(echo "${{ github.event.head_commit.message }}" | head -1)
           curl -sf -X POST "${{ secrets.TELEGRAM_NOTIFY_URL }}" \
             -H "Content-Type: application/json" \
-            -d "{\"message\": \"❌ PROJECT_NAME deploy FAILED\\n\\nBranch: ${{ github.ref_name }}\\nCommit: ${COMMIT_MSG}\\nCheck: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            -d "{\"message\": \"❌ agentFlow deploy FAILED\\n\\nBranch: ${{ github.ref_name }}\\nCommit: ${COMMIT_MSG}\\nCheck: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
             || echo "::warning::Telegram notification failed"
 
   # ── Close PR preview ───────────────────────────────────────────────

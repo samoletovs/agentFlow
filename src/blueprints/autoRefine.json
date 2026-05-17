@@ -1,0 +1,95 @@
+{
+  "version": "1.0",
+  "project": "autoRefine",
+  "agent": "autoRefine",
+  "summary": "An agent that reads a project's vision + tech stack, researches competitors, identifies gaps, drafts an improvement plan, and opens a pull request with tested changes.",
+  "tags": ["meta-agent", "self-improvement", "github-pr"],
+  "stack": ["foundry", "github-actions", "python"],
+  "telemetry": {
+    "appInsights": true,
+    "tracerName": "autoRefine.agent"
+  },
+  "nodes": [
+    {
+      "id": "schedule",
+      "kind": "trigger",
+      "label": "GitHub Actions",
+      "detail": "Scheduled · autorefine-evaluate.yml"
+    },
+    {
+      "id": "manual_run",
+      "kind": "trigger",
+      "label": "Manual run",
+      "detail": "python -m agent.main --repo … --mode evaluate"
+    },
+    {
+      "id": "agent_orchestrator",
+      "kind": "compute",
+      "label": "agent/main.py",
+      "detail": "Orchestrator · Python 3.11"
+    },
+    {
+      "id": "project_yaml",
+      "kind": "data",
+      "label": "project.yaml",
+      "detail": "Vision + stack of each target repo"
+    },
+    {
+      "id": "tools_research",
+      "kind": "tool",
+      "label": "Research tools",
+      "detail": "web_search · competitor_lookup · readme_summarize"
+    },
+    {
+      "id": "tools_codegen",
+      "kind": "tool",
+      "label": "Codegen tools",
+      "detail": "create_branch · write_file · run_tests · open_pr"
+    },
+    {
+      "id": "foundry_agent",
+      "kind": "agent",
+      "label": "autoRefine (Foundry)",
+      "detail": "gpt-4o-mini · system + task prompts"
+    },
+    {
+      "id": "github_target",
+      "kind": "repo",
+      "label": "Target repo",
+      "detail": "Any samoletovs/* repo with project.yaml"
+    },
+    {
+      "id": "github_pr",
+      "kind": "repo",
+      "label": "Pull request",
+      "detail": "Branch + tests + description"
+    },
+    {
+      "id": "app_insights",
+      "kind": "data",
+      "label": "Application Insights",
+      "detail": "Per-step traces (planned)"
+    }
+  ],
+  "flows": [
+    {
+      "id": "evaluate_and_pr",
+      "label": "Evaluate a project and open a PR",
+      "trigger": "Schedule or manual run",
+      "steps": [
+        { "from": "schedule", "to": "agent_orchestrator", "label": "dispatch" },
+        { "from": "manual_run", "to": "agent_orchestrator", "label": "dispatch" },
+        { "from": "agent_orchestrator", "to": "github_target", "label": "clone" },
+        { "from": "github_target", "to": "project_yaml", "label": "read" },
+        { "from": "project_yaml", "to": "agent_orchestrator", "label": "vision + stack" },
+        { "from": "agent_orchestrator", "to": "foundry_agent", "label": "ask: evaluate" },
+        { "from": "foundry_agent", "to": "tools_research", "label": "call: research" },
+        { "from": "tools_research", "to": "foundry_agent", "label": "findings" },
+        { "from": "foundry_agent", "to": "tools_codegen", "label": "call: write changes" },
+        { "from": "tools_codegen", "to": "github_target", "label": "branch + commits" },
+        { "from": "tools_codegen", "to": "github_pr", "label": "open PR" },
+        { "from": "agent_orchestrator", "to": "app_insights", "label": "spans" }
+      ]
+    }
+  ]
+}

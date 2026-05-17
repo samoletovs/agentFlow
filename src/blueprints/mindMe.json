@@ -1,0 +1,122 @@
+{
+  "version": "1.0",
+  "project": "mindMe",
+  "agent": "companion",
+  "summary": "A personal Telegram companion that delivers a calm morning briefing built from your private knowledge graph and lets you ask follow-ups in natural language.",
+  "tags": ["personal", "telegram", "foundry-prompt-agent"],
+  "stack": ["foundry", "azure-functions", "azure-blob", "azure-keyvault", "telegram"],
+  "telemetry": {
+    "appInsights": true,
+    "tracerName": "mindMe.harness"
+  },
+  "nodes": [
+    {
+      "id": "telegram_user",
+      "kind": "channel",
+      "label": "Telegram",
+      "detail": "@samoletovs (allowlisted chat)",
+      "private": true
+    },
+    {
+      "id": "timer_0730",
+      "kind": "trigger",
+      "label": "Timer · 07:30",
+      "detail": "CRON 0 30 7 * * *"
+    },
+    {
+      "id": "function_app",
+      "kind": "compute",
+      "label": "Function App",
+      "detail": "Flex Consumption · Python 3.11",
+      "resource": "func-mindme-ymcpt"
+    },
+    {
+      "id": "tool_briefing_context",
+      "kind": "tool",
+      "label": "get_briefing_context",
+      "detail": "/api/tools/briefing_context"
+    },
+    {
+      "id": "tool_weather",
+      "kind": "tool",
+      "label": "get_weather",
+      "detail": "/api/tools/weather"
+    },
+    {
+      "id": "wttr",
+      "kind": "tool",
+      "label": "wttr.in",
+      "detail": "Public weather JSON"
+    },
+    {
+      "id": "personal_os",
+      "kind": "data",
+      "label": "personal-os blob",
+      "detail": "Private container · MMK at-rest only",
+      "private": true
+    },
+    {
+      "id": "key_vault",
+      "kind": "secret",
+      "label": "Key Vault",
+      "detail": "Telegram + briefing secrets"
+    },
+    {
+      "id": "companion_agent",
+      "kind": "agent",
+      "label": "companion (prompt agent)",
+      "detail": "Foundry · gpt-4o-mini",
+      "resource": "mindMe / companion"
+    },
+    {
+      "id": "app_insights",
+      "kind": "data",
+      "label": "Application Insights",
+      "detail": "appi-mindme · IDs/sizes only (Rule 9)"
+    },
+    {
+      "id": "github_repo",
+      "kind": "repo",
+      "label": "samoletovs/mindMe",
+      "detail": "Private",
+      "url": "https://github.com/samoletovs/mindMe"
+    }
+  ],
+  "flows": [
+    {
+      "id": "morning_briefing",
+      "label": "Morning briefing (07:30)",
+      "trigger": "Timer 07:30 Sweden time",
+      "steps": [
+        { "from": "timer_0730", "to": "function_app", "label": "fires" },
+        { "from": "function_app", "to": "companion_agent", "label": "ask_companion" },
+        { "from": "companion_agent", "to": "tool_briefing_context", "label": "call tool" },
+        { "from": "tool_briefing_context", "to": "personal_os", "label": "read markdown" },
+        { "from": "personal_os", "to": "tool_briefing_context", "label": "sanitized snapshot" },
+        { "from": "tool_briefing_context", "to": "companion_agent", "label": "JSON context" },
+        { "from": "companion_agent", "to": "tool_weather", "label": "call tool" },
+        { "from": "tool_weather", "to": "wttr", "label": "GET wttr.in" },
+        { "from": "wttr", "to": "tool_weather", "label": "JSON" },
+        { "from": "tool_weather", "to": "companion_agent", "label": "weather summary" },
+        { "from": "companion_agent", "to": "function_app", "label": "briefing text" },
+        { "from": "function_app", "to": "telegram_user", "label": "sendMessage" },
+        { "from": "function_app", "to": "app_insights", "label": "spans" }
+      ]
+    },
+    {
+      "id": "telegram_chat",
+      "label": "Telegram chat (free-form)",
+      "trigger": "User message · POST /api/telegram_webhook",
+      "steps": [
+        { "from": "telegram_user", "to": "function_app", "label": "webhook (POST)" },
+        { "from": "function_app", "to": "key_vault", "label": "fetch bot token / secret" },
+        { "from": "function_app", "to": "companion_agent", "label": "ask_companion" },
+        { "from": "companion_agent", "to": "tool_briefing_context", "label": "(if asked)" },
+        { "from": "tool_briefing_context", "to": "personal_os", "label": "read markdown" },
+        { "from": "companion_agent", "to": "function_app", "label": "reply text" },
+        { "from": "function_app", "to": "telegram_user", "label": "sendMessage" },
+        { "from": "function_app", "to": "app_insights", "label": "spans" }
+      ]
+    }
+  ]
+}

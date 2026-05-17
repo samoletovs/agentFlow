@@ -1,0 +1,132 @@
+{
+  "version": "1.0",
+  "project": "atlas",
+  "agent": "atlas-teacher",
+  "summary": "A personal teacher PWA: watches GitHub activity, generates phone-readable micro-lessons via Foundry, and surfaces them on demand.",
+  "tags": ["personal-teacher", "pwa", "lessons", "github-activity"],
+  "stack": ["foundry", "azure-functions", "cosmos-db", "azure-swa", "react", "entra-id"],
+  "telemetry": {
+    "appInsights": true,
+    "tracerName": "atlas.api"
+  },
+  "nodes": [
+    {
+      "id": "pwa",
+      "kind": "pwa",
+      "label": "atlas PWA",
+      "detail": "React 19 + Vite · installable on phone",
+      "url": "https://atlas.naurolabs.com"
+    },
+    {
+      "id": "swa_auth",
+      "kind": "trigger",
+      "label": "SWA Entra ID",
+      "detail": "Built-in auth · single user (sam)"
+    },
+    {
+      "id": "swa",
+      "kind": "compute",
+      "label": "Static Web App",
+      "detail": "Free tier · SWA-managed Functions"
+    },
+    {
+      "id": "api",
+      "kind": "compute",
+      "label": "API (Functions)",
+      "detail": "Node 20 · TypeScript · v4 programming model"
+    },
+    {
+      "id": "lessons_container",
+      "kind": "data",
+      "label": "lessons",
+      "detail": "Cosmos NoSQL · pk=userId"
+    },
+    {
+      "id": "topics_container",
+      "kind": "data",
+      "label": "topics",
+      "detail": "Cosmos NoSQL · pk=userId"
+    },
+    {
+      "id": "activity_container",
+      "kind": "data",
+      "label": "activity_events",
+      "detail": "Cosmos NoSQL · pk=userId"
+    },
+    {
+      "id": "generate_lessons",
+      "kind": "compute",
+      "label": "generate_lessons.py",
+      "detail": "Local Python script · scheduled / on-demand"
+    },
+    {
+      "id": "github_api",
+      "kind": "tool",
+      "label": "GitHub API",
+      "detail": "Recent commits + PRs"
+    },
+    {
+      "id": "atlas_teacher",
+      "kind": "agent",
+      "label": "atlas-teacher",
+      "detail": "Foundry · gpt-4o-mini · temp 0.2",
+      "resource": "foundryLab / atlas-teacher"
+    },
+    {
+      "id": "app_insights",
+      "kind": "data",
+      "label": "Application Insights",
+      "detail": "Shared with foundryLab"
+    },
+    {
+      "id": "github_repo",
+      "kind": "repo",
+      "label": "samoletovs/atlas",
+      "detail": "Public",
+      "url": "https://github.com/samoletovs/atlas"
+    }
+  ],
+  "flows": [
+    {
+      "id": "lesson_generation",
+      "label": "Daily lesson generation",
+      "trigger": "Scheduled run of generate_lessons.py",
+      "steps": [
+        { "from": "generate_lessons", "to": "github_api", "label": "fetch activity" },
+        { "from": "github_api", "to": "generate_lessons", "label": "events" },
+        { "from": "generate_lessons", "to": "activity_container", "label": "upsert events" },
+        { "from": "generate_lessons", "to": "atlas_teacher", "label": "ask: produce lesson" },
+        { "from": "atlas_teacher", "to": "generate_lessons", "label": "lesson markdown" },
+        { "from": "generate_lessons", "to": "lessons_container", "label": "insert lesson" },
+        { "from": "generate_lessons", "to": "topics_container", "label": "track topic mastery" },
+        { "from": "generate_lessons", "to": "app_insights", "label": "spans" }
+      ]
+    },
+    {
+      "id": "read_lesson",
+      "label": "Read a lesson on phone",
+      "trigger": "User opens PWA",
+      "steps": [
+        { "from": "pwa", "to": "swa_auth", "label": "sign in" },
+        { "from": "swa_auth", "to": "pwa", "label": "x-ms-client-principal" },
+        { "from": "pwa", "to": "swa", "label": "GET /api/lessons" },
+        { "from": "swa", "to": "api", "label": "route" },
+        { "from": "api", "to": "lessons_container", "label": "query pk=sam" },
+        { "from": "lessons_container", "to": "api", "label": "rows" },
+        { "from": "api", "to": "pwa", "label": "JSON" }
+      ]
+    },
+    {
+      "id": "follow_up_question",
+      "label": "Ask a follow-up about a lesson",
+      "trigger": "User taps 'ask' on a lesson",
+      "steps": [
+        { "from": "pwa", "to": "api", "label": "POST /api/lessons/:id/ask" },
+        { "from": "api", "to": "lessons_container", "label": "load lesson" },
+        { "from": "api", "to": "atlas_teacher", "label": "ask with lesson context" },
+        { "from": "atlas_teacher", "to": "api", "label": "answer" },
+        { "from": "api", "to": "pwa", "label": "answer + sources" }
+      ]
+    }
+  ]
+}

@@ -4,9 +4,13 @@ build/
 .env
 .env.local
 *.log
+*.tsbuildinfo
 .DS_Store
 .vite/
 coverage/
 .playwright-mcp/
 playwright-report/
 test-results/
+api/dist/
+api/node_modules/
+api/local.settings.json

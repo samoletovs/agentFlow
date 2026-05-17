@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentflow.naurolabs.com/schemas/agent-blueprint.v1.json",
+  "title": "agent-blueprint.v1",
+  "description": "Declarative description of a nauroLabs agent: its nodes (components) and flows (information paths between them). Source of truth for the agentFlow visualizer. One file per project.",
+  "type": "object",
+  "required": ["version", "project", "agent", "summary", "nodes", "flows"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "const": "1.0",
+      "description": "Schema version. Bump on breaking changes."
+    },
+    "project": {
+      "type": "string",
+      "pattern": "^[a-z][a-zA-Z]+$",
+      "description": "lowerCamelCase project name (matches workspace folder)."
+    },
+    "agent": {
+      "type": "string",
+      "description": "Human-readable agent name as used in conversation."
+    },
+    "summary": {
+      "type": "string",
+      "maxLength": 280,
+      "description": "One-sentence elevator pitch."
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Free-form tags for filtering."
+    },
+    "stack": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Tech stack labels (e.g. 'foundry', 'azure-functions', 'cosmos-db')."
+    },
+    "telemetry": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "appInsights": {
+          "type": "boolean",
+          "description": "Whether App Insights is wired (traces visible in Foundry/AI Toolkit)."
+        },
+        "tracerName": {
+          "type": "string",
+          "description": "OpenTelemetry tracer name used by the agent (for filtering)."
+        }
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/node" }
+    },
+    "flows": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/flow" }
+    }
+  },
+  "$defs": {
+    "node": {
+      "type": "object",
+      "required": ["id", "kind", "label"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_]*$",
+          "description": "Stable identifier referenced from flow steps. snake_case."
+        },
+        "kind": {
+          "enum": [
+            "channel",
+            "trigger",
+            "compute",
+            "tool",
+            "data",
+            "secret",
+            "agent",
+            "job",
+            "repo",
+            "pwa"
+          ],
+          "description": "Node category. Drives the icon and color of the rendered node."
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 60,
+          "description": "Short display name (the box header)."
+        },
+        "detail": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "One-line subtitle shown under the label."
+        },
+        "resource": {
+          "type": "string",
+          "description": "Concrete Azure resource id, repo name, or external service (e.g. 'func-mindme-ymcpt', 'wttr.in')."
+        },
+        "private": {
+          "type": "boolean",
+          "default": false,
+          "description": "If true, the node is redacted (label replaced with 'Restricted') for anonymous visitors. Allowlisted signed-in users see the full label."
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Optional deep-link (repo, docs, dashboard)."
+        }
+      }
+    },
+    "flow": {
+      "type": "object",
+      "required": ["id", "label", "steps"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_]*$"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "trigger": {
+          "type": "string",
+          "description": "Free-form trigger description (e.g. '07:30 daily', 'user message', 'queue message')."
+        },
+        "private": {
+          "type": "boolean",
+          "default": false,
+          "description": "If true, the entire flow is hidden from anonymous visitors."
+        },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["from", "to"],
+            "additionalProperties": false,
+            "properties": {
+              "from": { "type": "string" },
+              "to": { "type": "string" },
+              "label": {
+                "type": "string",
+                "maxLength": 60,
+                "description": "Edge label describing what travels along this step."
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
