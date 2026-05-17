@@ -92,7 +92,7 @@ export default function App() {
             href="/.auth/login/aad?post_login_redirect_uri=/"
           >
             <span className="dot" />
-            sign in for full view
+            sign in<span className="hide-mobile"> for full view</span>
           </a>
         )}
       </header>
