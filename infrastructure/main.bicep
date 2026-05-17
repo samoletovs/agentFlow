@@ -28,7 +28,7 @@ module swa '../../.github/infrastructure/modules/swa.bicep' = {
   name: 'swa-${projectName}'
   params: {
     projectName: projectName
-    location: location
+    location: 'westeurope' // SWA Free tier is region-restricted; RG stays in northeurope
     customDomain: customDomain
     tags: tags
   }

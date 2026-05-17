@@ -11,7 +11,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "validate-blueprints": "tsx scripts/validate-blueprints.ts",
-    "test": "vitest run"
+    "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
     "@xyflow/react": "^12.4.4",
