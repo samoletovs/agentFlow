@@ -1,7 +1,8 @@
-// Simple layered layout for blueprint nodes — no heavy graph library.
-// We split nodes into columns by topological order over the union of flow steps,
-// then stack within each column by insertion order.
+// DAG layout for blueprint nodes using dagre — left-to-right by default.
+// We feed dagre the visible nodes + edges and let it compute (x, y) positions
+// that balance width and avoid the naive single-column stack we used before.
 
+import dagre from "dagre";
 import type { BlueprintNode, BlueprintFlow } from "./blueprint";
 
 export interface LaidOutNode extends BlueprintNode {
@@ -9,66 +10,52 @@ export interface LaidOutNode extends BlueprintNode {
   y: number;
 }
 
-const COL_WIDTH = 280;
-const ROW_HEIGHT = 110;
-const PADDING_X = 80;
-const PADDING_Y = 60;
+const NODE_WIDTH = 220;
+const NODE_HEIGHT = 78;
+const RANK_SEP = 60; // gap between layers (left-to-right)
+const NODE_SEP = 32; // gap between siblings within a layer
 
 export function layoutNodes(
   nodes: BlueprintNode[],
   flows: BlueprintFlow[],
 ): LaidOutNode[] {
+  if (nodes.length === 0) return [];
+
+  const g = new dagre.graphlib.Graph();
+  g.setGraph({
+    rankdir: "LR",
+    ranksep: RANK_SEP,
+    nodesep: NODE_SEP,
+    marginx: 24,
+    marginy: 24,
+  });
+  g.setDefaultEdgeLabel(() => ({}));
+
   const ids = new Set(nodes.map((n) => n.id));
-  const inEdges = new Map<string, Set<string>>();
-  const outEdges = new Map<string, Set<string>>();
-  for (const id of ids) {
-    inEdges.set(id, new Set());
-    outEdges.set(id, new Set());
+  for (const n of nodes) {
+    g.setNode(n.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
   }
+
+  const seen = new Set<string>();
   for (const flow of flows) {
     for (const step of flow.steps) {
       if (!ids.has(step.from) || !ids.has(step.to)) continue;
-      outEdges.get(step.from)!.add(step.to);
-      inEdges.get(step.to)!.add(step.from);
+      const key = `${step.from}->${step.to}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      g.setEdge(step.from, step.to);
     }
   }
 
-  // Longest-path layering (Coffman–Graham approximation).
-  const layer = new Map<string, number>();
-  const remaining = new Set(ids);
-  let depth = 0;
-  while (remaining.size > 0) {
-    const ready = [...remaining].filter((id) =>
-      [...inEdges.get(id)!].every((from) => !remaining.has(from)),
-    );
-    if (ready.length === 0) {
-      // Cycle — assign whatever's left to the current depth.
-      for (const id of remaining) layer.set(id, depth);
-      break;
-    }
-    for (const id of ready) {
-      layer.set(id, depth);
-      remaining.delete(id);
-    }
-    depth += 1;
-  }
+  dagre.layout(g);
 
-  const byLayer = new Map<number, BlueprintNode[]>();
-  for (const node of nodes) {
-    const l = layer.get(node.id) ?? 0;
-    if (!byLayer.has(l)) byLayer.set(l, []);
-    byLayer.get(l)!.push(node);
-  }
-
-  const result: LaidOutNode[] = [];
-  for (const [l, group] of [...byLayer.entries()].sort((a, b) => a[0] - b[0])) {
-    group.forEach((node, idx) => {
-      result.push({
-        ...node,
-        x: PADDING_X + l * COL_WIDTH,
-        y: PADDING_Y + idx * ROW_HEIGHT,
-      });
-    });
-  }
-  return result;
+  return nodes.map((n) => {
+    const pos = g.node(n.id);
+    // dagre returns centre coordinates — convert to top-left for React Flow.
+    return {
+      ...n,
+      x: (pos?.x ?? 0) - NODE_WIDTH / 2,
+      y: (pos?.y ?? 0) - NODE_HEIGHT / 2,
+    };
+  });
 }
