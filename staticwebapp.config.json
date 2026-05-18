@@ -6,7 +6,6 @@
     "exclude": ["/images/*", "/css/*", "/assets/*", "/api/*"]
   },
   "auth": {
-    "rolesSource": "/api/GetRoles",
     "identityProviders": {
       "azureActiveDirectory": {
         "registration": {

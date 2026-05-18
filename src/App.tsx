@@ -30,6 +30,13 @@ const NODE_KINDS = [
   { kind: "pwa", label: "App" },
 ] as const;
 
+// Emails permitted to see un-redacted blueprint details. Kept client-side
+// because SWA Free tier silently ignores the rolesSource function used to
+// assign custom roles (that feature requires the Standard plan). The gate
+// is cosmetic — the blueprint data is bundled into the JS anyway — so a
+// client-side allowlist matches the security posture and avoids the cost.
+const EMAIL_ALLOWLIST = ["146099412+samoletovs@users.noreply.github.com"];
+
 interface AuthState {
   signedIn: boolean;
   email: string | null;
@@ -54,7 +61,7 @@ async function loadAuth(): Promise<AuthState> {
       (c) => c.typ === "emails" || c.typ === "preferred_username" || c.typ === "email",
     );
     const email = emailClaim?.val ?? p.userDetails ?? null;
-    const allowed = (p.userRoles ?? []).includes("allowed");
+    const allowed = email != null && EMAIL_ALLOWLIST.includes(email.toLowerCase());
     return { signedIn: true, email, allowed };
   } catch {
     return { signedIn: false, email: null, allowed: false };
