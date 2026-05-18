@@ -1,0 +1,152 @@
+{
+  "version": "1.0",
+  "project": "foundryLab",
+  "agent": "lab-memory",
+  "summary": "A persistent Microsoft Foundry agent that answers natural-language questions about the NauroLabs lab by retrieving from a vector store ingested from docs, configs, and weekly reports.",
+  "tags": ["foundry", "rag", "knowledge-grounding", "vector-store"],
+  "stack": ["foundry", "python", "azure-openai", "azure-ai-search", "bicep"],
+  "telemetry": {
+    "appInsights": true,
+    "tracerName": "foundryLab.labMemoryAgent"
+  },
+  "nodes": [
+    {
+      "id": "cli_ingest",
+      "kind": "trigger",
+      "label": "python src/ingest.py",
+      "detail": "One-off run when corpus changes"
+    },
+    {
+      "id": "cli_provision",
+      "kind": "trigger",
+      "label": "python src/provision.py",
+      "detail": "Idempotent — create or update agent"
+    },
+    {
+      "id": "cli_ask",
+      "kind": "channel",
+      "label": "python src/ask.py",
+      "detail": "CLI · supports --json output"
+    },
+    {
+      "id": "sources_yaml",
+      "kind": "data",
+      "label": "config/sources.yaml",
+      "detail": "10 source groups · ~56 files (docs, manifest, reports)"
+    },
+    {
+      "id": "workspace_corpus",
+      "kind": "data",
+      "label": "Lab corpus",
+      "detail": ".github/{VISION,WORKSPACE,PLATFORM,reports/**}.md · workspace-manifest.json"
+    },
+    {
+      "id": "ingest_state",
+      "kind": "data",
+      "label": "config/ingest-state.json",
+      "detail": "Vector store ID + per-file mapping (gitignored)"
+    },
+    {
+      "id": "agent_state",
+      "kind": "data",
+      "label": "config/agent-state.json",
+      "detail": "Persistent agent_id + model + temperature (gitignored)"
+    },
+    {
+      "id": "default_credential",
+      "kind": "secret",
+      "label": "DefaultAzureCredential",
+      "detail": "Managed identity / az login — no API keys"
+    },
+    {
+      "id": "aiservices_account",
+      "kind": "compute",
+      "label": "foundrylab-aiservices",
+      "detail": "Azure AI Services (AIServices) · S0 · sweden central",
+      "resource": "Microsoft.CognitiveServices/accounts"
+    },
+    {
+      "id": "embed_deployment",
+      "kind": "tool",
+      "label": "text-embedding-3-large",
+      "detail": "Chunking + embeddings (Foundry-managed)"
+    },
+    {
+      "id": "vector_store",
+      "kind": "data",
+      "label": "Vector store · lab-memory",
+      "detail": "Static chunking · 56 files indexed"
+    },
+    {
+      "id": "file_search_tool",
+      "kind": "tool",
+      "label": "file_search",
+      "detail": "Foundry built-in retrieval tool over the vector store"
+    },
+    {
+      "id": "lab_memory_agent",
+      "kind": "agent",
+      "label": "lab-memory (Foundry)",
+      "detail": "gpt-4o-mini · temperature 0.2 · librarian persona",
+      "resource": "foundrylab / lab-memory"
+    },
+    {
+      "id": "app_insights",
+      "kind": "data",
+      "label": "Application Insights",
+      "detail": "foundrylab-appi · per-step traces"
+    },
+    {
+      "id": "github_repo",
+      "kind": "repo",
+      "label": "samoletovs/foundryLab",
+      "detail": "agents/labMemoryAgent/",
+      "url": "https://github.com/samoletovs/foundryLab"
+    }
+  ],
+  "flows": [
+    {
+      "id": "ingest_corpus",
+      "label": "Ingest the lab corpus",
+      "trigger": "Manual · python src/ingest.py (run after editing docs/reports)",
+      "steps": [
+        { "from": "cli_ingest", "to": "sources_yaml", "label": "read source globs" },
+        { "from": "sources_yaml", "to": "workspace_corpus", "label": "resolve globs" },
+        { "from": "workspace_corpus", "to": "cli_ingest", "label": "file paths + tags" },
+        { "from": "cli_ingest", "to": "default_credential", "label": "get token" },
+        { "from": "cli_ingest", "to": "aiservices_account", "label": "upload files" },
+        { "from": "aiservices_account", "to": "embed_deployment", "label": "chunk + embed" },
+        { "from": "embed_deployment", "to": "vector_store", "label": "indexed chunks" },
+        { "from": "vector_store", "to": "ingest_state", "label": "persist store id" }
+      ]
+    },
+    {
+      "id": "provision_agent",
+      "label": "Provision (or update) the persistent agent",
+      "trigger": "Manual · python src/provision.py",
+      "steps": [
+        { "from": "cli_provision", "to": "ingest_state", "label": "read vector_store_id" },
+        { "from": "cli_provision", "to": "default_credential", "label": "get token" },
+        { "from": "cli_provision", "to": "aiservices_account", "label": "list/create/update agent" },
+        { "from": "aiservices_account", "to": "lab_memory_agent", "label": "wire FileSearchTool" },
+        { "from": "lab_memory_agent", "to": "agent_state", "label": "persist agent_id" }
+      ]
+    },
+    {
+      "id": "ask",
+      "label": "Ask a question",
+      "trigger": "python src/ask.py \"<question>\"",
+      "steps": [
+        { "from": "cli_ask", "to": "agent_state", "label": "read agent_id" },
+        { "from": "cli_ask", "to": "default_credential", "label": "get token" },
+        { "from": "cli_ask", "to": "lab_memory_agent", "label": "thread.run.create" },
+        { "from": "lab_memory_agent", "to": "file_search_tool", "label": "call: file_search" },
+        { "from": "file_search_tool", "to": "vector_store", "label": "retrieve top-k chunks" },
+        { "from": "vector_store", "to": "file_search_tool", "label": "passages + citations" },
+        { "from": "file_search_tool", "to": "lab_memory_agent", "label": "grounded context" },
+        { "from": "lab_memory_agent", "to": "cli_ask", "label": "answer + citations" },
+        { "from": "lab_memory_agent", "to": "app_insights", "label": "spans" }
+      ]
+    }
+  ]
+}

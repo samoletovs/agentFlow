@@ -5,12 +5,16 @@ import mindMeRaw from "./blueprints/mindMe.json";
 import agentModeRaw from "./blueprints/agentMode.json";
 import atlasRaw from "./blueprints/atlas.json";
 import autoRefineRaw from "./blueprints/autoRefine.json";
+import foundryLabRaw from "./blueprints/foundryLab.json";
+import turgoRaw from "./blueprints/turgo.json";
 
 const BLUEPRINTS: AgentBlueprint[] = [
   mindMeRaw,
   agentModeRaw,
   atlasRaw,
   autoRefineRaw,
+  foundryLabRaw,
+  turgoRaw,
 ] as unknown as AgentBlueprint[];
 
 interface AuthState {

@@ -1,0 +1,211 @@
+{
+  "version": "1.0",
+  "project": "turgo",
+  "agent": "marketplaceAgents",
+  "summary": "An agent-first Baltic classifieds platform: a concierge routes intent, a selling agent prices and negotiates listings on the seller's behalf, and a buying agent monitors the market and bids on deals.",
+  "tags": ["multi-agent", "marketplace", "classifieds", "baltic"],
+  "stack": ["nextjs", "azure-openai", "azure-ai-search", "postgres", "redis", "bullmq", "container-apps"],
+  "telemetry": {
+    "appInsights": true,
+    "tracerName": "turgo.agents"
+  },
+  "nodes": [
+    {
+      "id": "user_web",
+      "kind": "channel",
+      "label": "Web · turgo.naurolabs.com",
+      "detail": "Next.js 16 App Router · 5 locales (en/lv/ru/lt/et)"
+    },
+    {
+      "id": "next_app",
+      "kind": "pwa",
+      "label": "Turgo app",
+      "detail": "React 19 · tRPC · shadcn/ui · mobile-first"
+    },
+    {
+      "id": "container_app",
+      "kind": "compute",
+      "label": "Container Apps · turgo",
+      "detail": "Next.js server · tRPC · BullMQ producer",
+      "resource": "Microsoft.App/containerApps"
+    },
+    {
+      "id": "bullmq_workers",
+      "kind": "job",
+      "label": "BullMQ workers",
+      "detail": "agent-workers · concurrency 5 · CRON + on-demand"
+    },
+    {
+      "id": "postgres",
+      "kind": "data",
+      "label": "PostgreSQL Flexible · pgvector",
+      "detail": "Listings · users · offers · market snapshots",
+      "resource": "Microsoft.DBforPostgreSQL/flexibleServers"
+    },
+    {
+      "id": "redis",
+      "kind": "data",
+      "label": "Redis",
+      "detail": "BullMQ queues + cache + view counter"
+    },
+    {
+      "id": "ai_search",
+      "kind": "data",
+      "label": "Azure AI Search",
+      "detail": "Free tier · listing semantic index",
+      "resource": "Microsoft.Search/searchServices"
+    },
+    {
+      "id": "blob_storage",
+      "kind": "data",
+      "label": "Azure Blob",
+      "detail": "Listing images (Sharp-processed)"
+    },
+    {
+      "id": "managed_identity",
+      "kind": "secret",
+      "label": "Managed identity",
+      "detail": "ACR pull · OpenAI · Search · Blob (no API keys)"
+    },
+    {
+      "id": "openai_account",
+      "kind": "tool",
+      "label": "Azure OpenAI · oai-turgo",
+      "detail": "gpt-4o-mini · text-embedding-3-small",
+      "resource": "Microsoft.CognitiveServices/accounts"
+    },
+    {
+      "id": "ai_router",
+      "kind": "tool",
+      "label": "services/ai.ts",
+      "detail": "Provider router · Azure (prod) ↔ GitHub Models (dev) · mock fallback"
+    },
+    {
+      "id": "concierge_agent",
+      "kind": "agent",
+      "label": "Concierge",
+      "detail": "Intent routing · 5-language detection · suggests next action"
+    },
+    {
+      "id": "selling_agent",
+      "kind": "agent",
+      "label": "Selling agent",
+      "detail": "Pricing curve · auto-respond to offers · daily summary"
+    },
+    {
+      "id": "buying_agent",
+      "kind": "agent",
+      "label": "Buying agent",
+      "detail": "Deal score 0-100 · market monitor · auto-negotiate"
+    },
+    {
+      "id": "pricing_engine",
+      "kind": "tool",
+      "label": "agent-pricing",
+      "detail": "10-factor pricing · market trend · sub-category snapshots"
+    },
+    {
+      "id": "strategies",
+      "kind": "tool",
+      "label": "strategies/*",
+      "detail": "Selling + buying strategy registry · tick + deadline handlers"
+    },
+    {
+      "id": "scraper_sslv",
+      "kind": "job",
+      "label": "scraper-sslv",
+      "detail": "Builds market snapshots for trend + demand"
+    },
+    {
+      "id": "stripe_billing",
+      "kind": "tool",
+      "label": "Stripe",
+      "detail": "Free / Pro / Business tier gating"
+    },
+    {
+      "id": "app_insights",
+      "kind": "data",
+      "label": "Application Insights",
+      "detail": "Per-agent + per-job traces"
+    },
+    {
+      "id": "github_repo",
+      "kind": "repo",
+      "label": "samoletovs/turgo",
+      "detail": "Next.js · Prisma · BullMQ",
+      "url": "https://github.com/samoletovs/turgo"
+    }
+  ],
+  "flows": [
+    {
+      "id": "concierge_chat",
+      "label": "Concierge — detect intent and route",
+      "trigger": "User opens chat · POST /api/trpc/concierge.message",
+      "steps": [
+        { "from": "user_web", "to": "next_app", "label": "user message" },
+        { "from": "next_app", "to": "container_app", "label": "tRPC call" },
+        { "from": "container_app", "to": "concierge_agent", "label": "processConciergeMessage" },
+        { "from": "concierge_agent", "to": "ai_router", "label": "aiComplete (JSON mode)" },
+        { "from": "ai_router", "to": "openai_account", "label": "gpt-4o-mini" },
+        { "from": "openai_account", "to": "ai_router", "label": "intent + language" },
+        { "from": "ai_router", "to": "concierge_agent", "label": "JSON response" },
+        { "from": "concierge_agent", "to": "container_app", "label": "intent + suggested actions" },
+        { "from": "container_app", "to": "next_app", "label": "tRPC reply" },
+        { "from": "container_app", "to": "app_insights", "label": "spans" }
+      ]
+    },
+    {
+      "id": "selling_lifecycle",
+      "label": "Selling agent — price, post, respond",
+      "trigger": "Seller creates listing · then CRON ticks + buyer offers",
+      "steps": [
+        { "from": "user_web", "to": "next_app", "label": "create listing" },
+        { "from": "next_app", "to": "container_app", "label": "tRPC: listings.create" },
+        { "from": "container_app", "to": "blob_storage", "label": "store images (Sharp)" },
+        { "from": "container_app", "to": "selling_agent", "label": "calculateOptimalPrice" },
+        { "from": "selling_agent", "to": "pricing_engine", "label": "10-factor pricing" },
+        { "from": "pricing_engine", "to": "postgres", "label": "read market snapshots" },
+        { "from": "postgres", "to": "pricing_engine", "label": "median + trend + demand" },
+        { "from": "pricing_engine", "to": "selling_agent", "label": "suggested price + curve" },
+        { "from": "selling_agent", "to": "postgres", "label": "save listing + strategy" },
+        { "from": "selling_agent", "to": "ai_search", "label": "index listing" },
+        { "from": "container_app", "to": "redis", "label": "enqueue price-adjust + daily-summary (CRON)" },
+        { "from": "redis", "to": "bullmq_workers", "label": "dispatch job" },
+        { "from": "bullmq_workers", "to": "strategies", "label": "tick / deadline / offer handlers" },
+        { "from": "strategies", "to": "ai_router", "label": "draft response" },
+        { "from": "ai_router", "to": "openai_account", "label": "gpt-4o-mini" },
+        { "from": "bullmq_workers", "to": "postgres", "label": "update price / send reply" },
+        { "from": "bullmq_workers", "to": "app_insights", "label": "spans" }
+      ]
+    },
+    {
+      "id": "buying_monitor",
+      "label": "Buying agent — monitor market and bid",
+      "trigger": "Buyer sets criteria · CRON-driven market sweep",
+      "steps": [
+        { "from": "user_web", "to": "next_app", "label": "set criteria + budget" },
+        { "from": "next_app", "to": "container_app", "label": "tRPC: agents.buying.create" },
+        { "from": "container_app", "to": "redis", "label": "enqueue buying-agent-monitor" },
+        { "from": "redis", "to": "bullmq_workers", "label": "CRON tick" },
+        { "from": "bullmq_workers", "to": "buying_agent", "label": "scan listings" },
+        { "from": "buying_agent", "to": "ai_search", "label": "semantic match" },
+        { "from": "buying_agent", "to": "postgres", "label": "calculateDealScore" },
+        { "from": "buying_agent", "to": "strategies", "label": "negotiate?" },
+        { "from": "strategies", "to": "ai_router", "label": "draft offer" },
+        { "from": "ai_router", "to": "openai_account", "label": "gpt-4o-mini" },
+        { "from": "buying_agent", "to": "selling_agent", "label": "send offer (processIncomingOffer)" },
+        { "from": "buying_agent", "to": "app_insights", "label": "spans" }
+      ]
+    },
+    {
+      "id": "market_snapshot",
+      "label": "Build market snapshots (background)",
+      "trigger": "CRON · scraper-sslv worker",
+      "steps": [
+        { "from": "redis", "to": "scraper_sslv", "label": "CRON tick" },
+        { "from": "scraper_sslv", "to": "postgres", "label": "write market snapshots" },
+        { "from": "scraper_sslv", "to": "app_insights", "label": "spans" }
+      ]
+    }
+  ]
+}
