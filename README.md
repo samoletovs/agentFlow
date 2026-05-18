@@ -13,10 +13,10 @@ experiment under [NauroLabs](https://naurolabs.com).
   [`src/lib/agent-blueprint.v1.schema.json`](src/lib/agent-blueprint.v1.schema.json).
 - **`src/components/BlueprintCanvas.tsx`** — React Flow renderer with animated
   edges, per-flow filtering, and `private: true` node redaction.
-- **`api/src/GetRoles.ts`** — SWA `rolesSource` endpoint. Anyone can see the
-  public flows; signing in with Entra ID and being on the `ALLOWED_EMAILS`
-  app-setting list unlocks the `allowed` role, which reveals private nodes and
-  private flows.
+- **`src/App.tsx` (`EMAIL_ALLOWLIST`)** — client-side viewer allowlist.
+  Anyone can see the public flows; signing in with Entra ID and being on the
+  allowlist reveals private nodes and private flows. (SWA Free tier silently
+  ignores `rolesSource`, so the gate is necessarily client-side.)
 - **`scripts/validate-blueprints.ts`** — schema + referential-integrity check
   for every blueprint.
 
@@ -35,20 +35,12 @@ npm run build
 |---|---|
 | Anonymous | All public nodes + all non-private flows. Private nodes render as "Restricted". |
 | Signed in but not on allowlist | Same as anonymous, with a pill showing their email and "not on allowlist". |
-| Signed in & on `ALLOWED_EMAILS` | Full graph — private nodes show real labels, private flows appear. |
+| Signed in & on `EMAIL_ALLOWLIST` | Full graph — private nodes show real labels, private flows appear. |
 
-`ALLOWED_EMAILS` is a comma-separated case-insensitive list set via SWA app
-settings:
-
-```bash
-az staticwebapp appsettings set \
-  --name agentflow-swa \
-  --resource-group agentflow-rg \
-  --setting-names ALLOWED_EMAILS=146099412+samoletovs@users.noreply.github.com,friend@example.com
-```
-
-Add or remove an email at any time with the same command. No code change, no
-redeploy. The `GetRoles` Function reads the env var on every sign-in.
+`EMAIL_ALLOWLIST` is a constant in `src/App.tsx`. To add or remove a viewer,
+edit the constant and commit — the next deploy ships the change. The list
+is client-side only and is purely cosmetic (the blueprint JSON ships in the
+bundle anyway; the gate just controls what's redacted).
 
 ## Adding a new agent blueprint
 

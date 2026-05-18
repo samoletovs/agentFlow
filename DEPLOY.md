@@ -107,17 +107,12 @@ az staticwebapp appsettings set \
   --name agentflow-swa --resource-group agentflow-rg \
   --setting-names \
     AAD_CLIENT_ID="$APP_ID" \
-    AAD_CLIENT_SECRET="$CLIENT_SECRET" \
-    ALLOWED_EMAILS="146099412+samoletovs@users.noreply.github.com"
+    AAD_CLIENT_SECRET="$CLIENT_SECRET"
 ```
 
-Adding friends later is one command:
-
-```bash
-az staticwebapp appsettings set \
-  --name agentflow-swa --resource-group agentflow-rg \
-  --setting-names ALLOWED_EMAILS="146099412+samoletovs@users.noreply.github.com,friend@example.com"
-```
+The viewer allowlist lives in `src/App.tsx` (`EMAIL_ALLOWLIST`) — SWA Free
+tier silently ignores `rolesSource`, so server-side role assignment isn't an
+option. To add a viewer, edit the constant and commit.
 
 ## Step 6 — DNS (Google Cloud DNS, project `era-erp`)
 
@@ -148,9 +143,6 @@ gh workflow run "CI/CD" --repo samoletovs/agentFlow
 
 ```bash
 curl -s https://agentflow.naurolabs.com | head -5    # ✅ HTML
-curl -s https://agentflow.naurolabs.com/api/GetRoles \
-  -X POST -d '{}' -H "content-type: application/json"
-# → {"roles":[]}    (no allowlist match for anonymous body)
 ```
 
 Open the site, click "sign in for full view", complete the AAD flow, and

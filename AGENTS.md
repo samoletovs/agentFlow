@@ -37,9 +37,13 @@ swa start ../dist --api-location . --run "npm run dev --prefix .."
    it MUST carry `"private": true`. The renderer redacts these for anonymous
    visitors. Don't try to filter on the JS side — the JSON ships in the
    bundle, so the schema-level flag is what matters.
-3. **`ALLOWED_EMAILS` is the only allowlist.** Don't hardcode emails in source.
-   Don't ship a fallback list. `GetRoles.ts` reads the env var fresh on every
-   sign-in.
+3. **The allowlist lives in `src/App.tsx` (`EMAIL_ALLOWLIST`).** SWA Free tier
+   silently ignores `rolesSource`, so server-side role assignment isn't an
+   option here — the gate is client-side and purely cosmetic (blueprint JSON
+   ships in the bundle anyway; `private: true` controls what gets redacted for
+   non-allowlisted viewers). To add a viewer, edit the constant and commit.
+   See [PLATFORM.md §2](../.github/PLATFORM.md#2-authentication) for the
+   Free-tier `rolesSource` trap.
 4. **No third-party trackers, no analytics SDK, no remote fonts.** The CSP
    header enforces self-only `connect-src` and `script-src`.
 5. **No real telemetry data in the bundle.** Blueprints describe the *shape*
