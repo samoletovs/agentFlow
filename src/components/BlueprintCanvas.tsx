@@ -3,7 +3,6 @@ import {
   BackgroundVariant,
   Controls,
   Handle,
-  MiniMap,
   Position,
   ReactFlow,
   type Edge,
@@ -211,21 +210,6 @@ export function BlueprintCanvas({
     >
       <Background variant={BackgroundVariant.Dots} color="#1a2440" gap={24} size={1} />
       <Controls showInteractive={false} />
-      <MiniMap
-        pannable
-        zoomable
-        maskColor="rgba(11,16,32,0.7)"
-        nodeColor={(n) => {
-          const data = n.data as NodeData;
-          const kind = data.node.kind;
-          return `var(--kind-${kind})`;
-        }}
-        style={{
-          background: "rgba(17, 26, 48, 0.85)",
-          border: "1px solid #1f2a44",
-          borderRadius: 8,
-        }}
-      />
     </ReactFlow>
   );
 }

@@ -556,3 +556,57 @@ a.auth-pill:hover {
   .bp-node .label { font-size: 12px; }
   .bp-node .detail { font-size: 10px; }
 }
+
+/* ---------------------------------------------------------------------------
+ * React Flow control theming
+ * Default styles render white buttons with dark icons, which clashes with
+ * our dark canvas. Override via the official --xy-controls-* CSS variables.
+ * ------------------------------------------------------------------------- */
+.react-flow__controls {
+  background: rgba(17, 26, 48, 0.92);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  --xy-controls-button-background-color: transparent;
+  --xy-controls-button-background-color-hover: rgba(108, 140, 255, 0.18);
+  --xy-controls-button-color: var(--ink-soft);
+  --xy-controls-button-color-hover: var(--ink);
+  --xy-controls-button-border-color: var(--line-soft);
+}
+.react-flow__controls-button {
+  width: 28px;
+  height: 28px;
+}
+.react-flow__controls-button svg {
+  fill: currentColor;
+}
+
+/* ---------------------------------------------------------------------------
+ * Scrollbar theming — match the dark canvas instead of the OS default.
+ * ------------------------------------------------------------------------- */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-soft);
+  background-clip: padding-box;
+  border: 2px solid transparent;
+}
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}

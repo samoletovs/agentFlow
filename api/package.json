@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "main": "dist/*.js",
+  "main": "dist/functions/*.js",
   "scripts": {
     "build": "tsc",
     "start": "func start"
