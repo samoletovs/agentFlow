@@ -65,12 +65,17 @@ gh secret set AZURE_SWA_TOKEN --repo samoletovs/agentFlow \
   --body "<paste-token-here>"
 ```
 
-Also copy `TELEGRAM_NOTIFY_URL` from any other repo's secrets:
+Telegram deploy notifications use the **nauroLabs ops bot** via two per-repo secrets,
+`NAURO_BOT_TOKEN` + `NAURO_CHAT_ID`. Provision them once across every NauroLabs repo
+with the helper script:
 
-```bash
-gh secret set TELEGRAM_NOTIFY_URL --repo samoletovs/agentFlow \
-  --body "<paste-url-here>"
+```powershell
+pwsh -File ../.github/scripts/set-nauro-bot-secrets.ps1
 ```
+
+It prompts for both values as `SecureString` (masked) and sets them via `gh secret set`
+on each repo — nothing is logged or echoed. See PLATFORM.md §7 for why we're not on
+org-level secrets yet (GitHub Free org doesn't push to private repos).
 
 ## Step 4 — Register Entra ID app for SWA auth
 
