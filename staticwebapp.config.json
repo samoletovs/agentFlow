@@ -5,17 +5,6 @@
     "rewrite": "/index.html",
     "exclude": ["/images/*", "/css/*", "/assets/*", "/api/*"]
   },
-  "auth": {
-    "identityProviders": {
-      "azureActiveDirectory": {
-        "registration": {
-          "openIdIssuer": "https://login.microsoftonline.com/common/v2.0",
-          "clientIdSettingName": "AAD_CLIENT_ID",
-          "clientSecretSettingName": "AAD_CLIENT_SECRET"
-        }
-      }
-    }
-  },
   "routes": [
     {
       "route": "/.auth/login/github",
