@@ -21,6 +21,6 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src", "scripts"],
+  "include": ["src"],
   "exclude": ["api", "dist", "node_modules"]
 }
