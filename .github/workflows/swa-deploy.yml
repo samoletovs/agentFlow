@@ -46,7 +46,12 @@ jobs:
   # ── Build & Deploy ─────────────────────────────────────────────────
   deploy:
     needs: quality
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+    # Skip the SWA deploy on Dependabot PRs: GitHub withholds the deploy-token
+    # secret from Dependabot runs, so the deploy step can only fail and would
+    # otherwise block auto-merge. Quality (build/lint/test) still runs on them.
+    if: >-
+      github.actor != 'dependabot[bot]' &&
+      (github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed'))
     runs-on: ubuntu-latest
     name: Build and Deploy
     steps:
@@ -62,10 +67,6 @@ jobs:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_SWA_TOKEN }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: upload
-          # Dependabot-triggered runs are denied repository secrets by GitHub,
-          # so the SWA token is empty on those PRs. Skip the deploy (build still
-          # runs) instead of failing the check, which would block auto-merge.
-          skip_deploy_on_missing_secrets: true
           app_location: "/"
           api_location: ""
           output_location: "dist"
