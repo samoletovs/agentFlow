@@ -1,0 +1,19 @@
+name: agentFlow
+purpose: "Visualises how nauroLabs agents work — renders declarative agent blueprints as node/flow diagrams so an agent's architecture can be read rather than reverse-engineered"
+users: "The lab itself, and anyone trying to understand how an agent is wired before changing it"
+stage: active
+goals:
+  - "One declarative blueprint file per agent, validated against agent-blueprint.v1.schema.json"
+  - "React Flow canvas with animated edges and per-flow filtering"
+  - "Two-tier visibility — public flows for everyone, private nodes behind Entra ID + allowlist"
+  - "Blueprints stay in sync with the agents they describe, not drift from them"
+  - "Low enough friction that a new agent gets a blueprint the day it is built"
+similar:
+  - "LangSmith / LangGraph Studio (agent tracing and graph views)"
+  - "Excalidraw + architecture diagrams (the manual alternative it replaces)"
+  - "Mermaid / Structurizr (diagram-as-code)"
+quality:
+  - tests
+  - ci-cd
+  - responsive
+  - auth
