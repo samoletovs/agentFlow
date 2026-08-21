@@ -1,13 +1,15 @@
-# Security Policy
+# Security policy
 
-## Reporting a vulnerability
+## Supported versions
 
-**Please do not open a public GitHub Issue for security vulnerabilities.**
+agentFlow is an experimental project. Security fixes are applied to the default
+branch only.
 
-Send a private report via [GitHub Security Advisories](https://github.com/samoletovs/agentFlow/security/advisories/new) or email the maintainer directly (see GitHub profile).
+## Report a vulnerability
 
-We will acknowledge receipt within 48 hours and aim to resolve confirmed issues within 30 days.
+Please use GitHub's **Report a vulnerability** button in the Security tab to
+open a private security advisory. Include the affected component, reproduction
+steps, and the potential impact.
 
-## Scope
-
-This is a NauroLabs research project. Features are experimental and may change without notice.
+Do not report security vulnerabilities in a public issue. You can expect an
+initial response within seven days.

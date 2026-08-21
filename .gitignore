@@ -17,3 +17,10 @@ api/local.settings.json
 
 # Local-only personal-info pattern overrides
 scripts/.leak-patterns.local.txt
+
+# Test output
+test-results/
+playwright-report/
+
+# OS
+Thumbs.db
