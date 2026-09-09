@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Visualize how nauroLabs agents work, what their components are, and how information flows between them.",
   "engines": {
-    "node": "^22.12.0 || ^24.0.0 || >=26.0.0"
+    "node": "^22.13.0 || ^24.0.0 || >=26.0.0"
   },
   "scripts": {
     "dev": "vite",

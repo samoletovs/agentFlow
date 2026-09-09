@@ -9,7 +9,7 @@ agents in this workspace (mindMe, agentMode, atlas, autoRefine, …).
 
 ## Build / Test / Deploy
 
-Use Node 22.12+ on the 22 LTS line (`.nvmrc`), or a version allowed by
+Use Node 22.13+ on the 22 LTS line (`.nvmrc`), or a version allowed by
 `package.json`. CI uses Node 22 for both quality checks and frontend builds.
 `npm test` must execute tests; blueprint validation and a production build are
 also required in PR CI. Deployment uploads prebuilt `dist/` with the root
