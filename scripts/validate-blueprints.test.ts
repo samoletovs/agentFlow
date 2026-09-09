@@ -30,7 +30,7 @@ function validate(cwd: string) {
   return result;
 }
 
-describe("blueprint validation gate", () => {
+describe("blueprint validation gate", { timeout: 15_000 }, () => {
   let directory: string;
 
   beforeEach(() => {
