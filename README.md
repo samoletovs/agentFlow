@@ -34,7 +34,7 @@ secrets or real telemetry.
 
 ## Run locally
 
-Use Node 22.12+ on the 22 LTS line (`.nvmrc`), or another version allowed by
+Use Node 22.13+ on the 22 LTS line (`.nvmrc`), or another version allowed by
 `package.json`. Vitest 5 no longer supports Node 20. CI builds and tests on
 Node 22, then deploys the prebuilt frontend with its SWA configuration.
 
