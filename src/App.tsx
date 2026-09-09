@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { BlueprintCanvas } from "./components/BlueprintCanvas";
 import type { AgentBlueprint } from "./lib/blueprint";
+import { filterFlows } from "./lib/flowSearch";
 import mindMeRaw from "./blueprints/mindMe.json";
 import agentModeRaw from "./blueprints/agentMode.json";
 import atlasRaw from "./blueprints/atlas.json";
@@ -71,6 +72,7 @@ async function loadAuth(): Promise<AuthState> {
 export default function App() {
   const [selectedProject, setSelectedProject] = useState(BLUEPRINTS[0].project);
   const [selectedFlow, setSelectedFlow] = useState("__all__");
+  const [flowSearch, setFlowSearch] = useState("");
   const [auth, setAuth] = useState<AuthState>({
     signedIn: false,
     email: null,
@@ -82,16 +84,21 @@ export default function App() {
     loadAuth().then(setAuth);
   }, []);
 
-  useEffect(() => {
-    setSelectedFlow("__all__");
-  }, [selectedProject]);
-
   const blueprint = useMemo(
     () => BLUEPRINTS.find((b) => b.project === selectedProject) ?? BLUEPRINTS[0],
     [selectedProject],
   );
 
   const redactPrivate = !auth.allowed;
+
+  const visibleFlows = useMemo(
+    () => blueprint.flows.filter((f) => !redactPrivate || f.private !== true),
+    [blueprint, redactPrivate],
+  );
+  const filteredFlows = useMemo(
+    () => filterFlows(visibleFlows, blueprint.tags, flowSearch),
+    [blueprint.tags, flowSearch, visibleFlows],
+  );
 
   const hiddenStats = useMemo(() => {
     if (!redactPrivate) return { nodes: 0, flows: 0 };
@@ -158,7 +165,11 @@ export default function App() {
             <div
               key={b.project}
               className={`project${b.project === selectedProject ? " active" : ""}`}
-              onClick={() => setSelectedProject(b.project)}
+              onClick={() => {
+                setSelectedProject(b.project);
+                setSelectedFlow("__all__");
+                setFlowSearch("");
+              }}
             >
               <div className="name">
                 {prefix}
@@ -189,15 +200,31 @@ export default function App() {
 
       <main>
         <div className="toolbar">
+          <input
+            type="search"
+            value={flowSearch}
+            onChange={(event) => {
+              const query = event.target.value;
+              setFlowSearch(query);
+              if (
+                selectedFlow !== "__all__" &&
+                !filterFlows(visibleFlows, blueprint.tags, query).some(
+                  (flow) => flow.id === selectedFlow,
+                )
+              ) {
+                setSelectedFlow("__all__");
+              }
+            }}
+            placeholder="Search flows"
+            aria-label="Search flows by name or tag"
+          />
           <button
             className={selectedFlow === "__all__" ? "active" : ""}
             onClick={() => setSelectedFlow("__all__")}
           >
             All flows
           </button>
-          {blueprint.flows
-            .filter((f) => !redactPrivate || f.private !== true)
-            .map((f, idx) => (
+          {filteredFlows.map((f) => (
               <button
                 key={f.id}
                 className={`flow-tab${selectedFlow === f.id ? " active" : ""}`}
@@ -205,14 +232,17 @@ export default function App() {
                 title={f.trigger}
                 style={
                   {
-                    "--flow-color": `var(--flow-${idx % 6})`,
+                    "--flow-color": `var(--flow-${visibleFlows.indexOf(f) % 6})`,
                   } as React.CSSProperties
                 }
               >
                 <span className="flow-dot" />
                 {f.label}
               </button>
-            ))}
+          ))}
+          {filteredFlows.length === 0 ? (
+            <span className="flow-empty">No matching flows</span>
+          ) : null}
         </div>
         <div className="summary-row">{blueprint.summary}</div>
         {redactPrivate && (hiddenStats.nodes > 0 || hiddenStats.flows > 0) ? (
