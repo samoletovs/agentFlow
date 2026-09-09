@@ -1,5 +1,5 @@
 // Validate every blueprint under src/blueprints/ against the schema.
-// Exits non-zero on failure — wire into CI later.
+// Exits non-zero on failure; CI runs this before building.
 
 import Ajv2020 from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
@@ -20,6 +20,11 @@ const schema = JSON.parse(readFileSync(schemaPath, "utf-8"));
 const validate = ajv.compile(schema);
 
 const files = readdirSync(blueprintsDir).filter((f: string) => f.endsWith(".json"));
+
+if (files.length === 0) {
+  console.error("No blueprint files found.");
+  process.exit(1);
+}
 
 let ok = true;
 for (const file of files) {

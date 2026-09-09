@@ -28,7 +28,7 @@ jobs:
 
       - uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
       - name: Install dependencies
@@ -42,6 +42,12 @@ jobs:
 
       - name: Test
         run: npm test
+
+      - name: Validate blueprints
+        run: npm run validate-blueprints
+
+      - name: Build frontend
+        run: npm run build
 
   # ── Build & Deploy ─────────────────────────────────────────────────
   deploy:
@@ -65,6 +71,17 @@ jobs:
           submodules: true
           lfs: false
 
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Build frontend with supported Node
+        run: |
+          npm ci
+          npm run build
+          cp staticwebapp.config.json dist/
+
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
@@ -72,9 +89,10 @@ jobs:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_SWA_TOKEN }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: upload
-          app_location: "/"
+          app_location: "dist"
           api_location: ""
-          output_location: "dist"
+          output_location: ""
+          skip_app_build: true
 
       - name: Notify Telegram (success)
         if: success() && github.event_name == 'push'

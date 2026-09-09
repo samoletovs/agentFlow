@@ -4,6 +4,9 @@
   "version": "0.1.0",
   "type": "module",
   "description": "Visualize how nauroLabs agents work, what their components are, and how information flows between them.",
+  "engines": {
+    "node": "^22.12.0 || ^24.0.0 || >=26.0.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -11,7 +14,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "validate-blueprints": "tsx scripts/validate-blueprints.ts",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run"
   },
   "dependencies": {
     "@types/dagre": "^0.7.54",
@@ -35,6 +38,6 @@
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.69.0",
     "vite": "^8.2.2",
-    "vitest": "^4.1.11"
+    "vitest": "^5.0.0"
   }
 }
