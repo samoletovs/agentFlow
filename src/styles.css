@@ -250,6 +250,29 @@ a.auth-pill:hover {
   transition: border-color 0.12s, background 0.12s;
   white-space: nowrap;
 }
+.app main .toolbar input[type="search"] {
+  width: 180px;
+  flex: 0 0 auto;
+  background: var(--bg);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 12px;
+}
+.app main .toolbar input[type="search"]:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+.app main .toolbar input[type="search"]::placeholder,
+.app main .toolbar .flow-empty {
+  color: var(--ink-soft);
+}
+.app main .toolbar .flow-empty {
+  white-space: nowrap;
+  font-size: 12px;
+}
 .app main .toolbar button:hover {
   border-color: var(--accent);
 }
