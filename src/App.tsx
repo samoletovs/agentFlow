@@ -224,7 +224,7 @@ export default function App() {
           >
             All flows
           </button>
-          {filteredFlows.map((f, idx) => (
+          {filteredFlows.map((f) => (
               <button
                 key={f.id}
                 className={`flow-tab${selectedFlow === f.id ? " active" : ""}`}
@@ -232,7 +232,7 @@ export default function App() {
                 title={f.trigger}
                 style={
                   {
-                    "--flow-color": `var(--flow-${idx % 6})`,
+                    "--flow-color": `var(--flow-${visibleFlows.indexOf(f) % 6})`,
                   } as React.CSSProperties
                 }
               >

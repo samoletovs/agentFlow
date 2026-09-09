@@ -14,7 +14,12 @@ illegible to the human responsible for supervising it.
 - Validates agent blueprints against a versioned JSON schema.
 - Renders nodes and animated information flows with React Flow.
 - Filters diagrams by flow and visually redacts nodes marked private.
+- Searches the visible flow list by name, ID, trigger or blueprint tag.
 - Provides public and signed-in views of the same static architecture model.
+
+Flow search updates as you type. A selected flow that no longer matches resets
+to All flows; switching agents clears the search. Private flows remain hidden
+from anonymous visitors, including in search results.
 
 The blueprint JSON is shipped to the browser. Private-node redaction is a
 presentation control, not a security boundary; blueprints must never contain
