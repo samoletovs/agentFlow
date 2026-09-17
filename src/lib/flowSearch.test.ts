@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { BlueprintFlow } from "./blueprint";
-import { filterFlows } from "./flowSearch";
+import { filterFlows, queryForSelectedFlow } from "./flowSearch";
 
 const flows: BlueprintFlow[] = [
   {
@@ -18,6 +18,16 @@ const flows: BlueprintFlow[] = [
 ];
 
 describe("filterFlows", () => {
+  it("clears an incompatible query when a flow is explicitly selected elsewhere", () => {
+    expect(queryForSelectedFlow(flows[0], undefined, "telegram")).toBe("");
+  });
+
+  it("retains compatible name, trigger and tag queries", () => {
+    expect(queryForSelectedFlow(flows[1], undefined, " TELEGRAM ")).toBe(" TELEGRAM ");
+    expect(queryForSelectedFlow(flows[0], undefined, "morning")).toBe("morning");
+    expect(queryForSelectedFlow(flows[0], ["personal"], "person")).toBe("person");
+  });
+
   it("filters flows by name in a case-insensitive way", () => {
     expect(filterFlows(flows, ["personal"], "TELEGRAM")).toEqual([flows[1]]);
   });

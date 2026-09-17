@@ -1,0 +1,179 @@
+.dispatch-stage {
+  position: relative;
+  width: 100%;
+  height: var(--lab-stage-height, clamp(380px, 62svh, 760px));
+  min-height: 320px;
+  overflow: hidden;
+  isolation: isolate;
+  color: var(--lab-ink, #24343d);
+  background: var(--lab-alloy, #c6d2c9);
+}
+
+.dispatch-stage .dispatch-stage__scene {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.dispatch-stage .dl-ink {
+  stroke: var(--lab-ink, #24343d);
+  stroke-width: 3;
+  stroke-linecap: square;
+  stroke-linejoin: round;
+}
+
+.dispatch-stage .dl-line {
+  fill: none;
+  stroke: var(--lab-ink, #24343d);
+  stroke-width: 2;
+  stroke-linecap: square;
+  stroke-linejoin: round;
+}
+
+.dispatch-stage .dl-fine { stroke-width: 1.7; }
+.dispatch-stage .dl-heavy { stroke-width: 4; }
+.dispatch-stage .dl-carbon { fill: var(--lab-ink, #24343d); }
+.dispatch-stage .dl-paper { fill: var(--lab-paper, #f2f0e5); }
+.dispatch-stage .dl-alloy { fill: var(--lab-alloy, #c6d2c9); }
+.dispatch-stage .dl-steel { fill: var(--lab-steel, #7d969d); }
+.dispatch-stage .dl-cel { fill: var(--lab-cel, #45636e); }
+.dispatch-stage .dl-signal { fill: var(--lab-signal, #c9513c); }
+.dispatch-stage .dl-shadow { fill: var(--lab-shadow, #8b9e99); }
+
+.dispatch-stage .dl-light-line {
+  fill: none;
+  stroke: var(--lab-paper, #f2f0e5);
+  stroke-width: 2;
+}
+
+.dispatch-stage .dispatch-stage__room-field { fill: var(--lab-room, #d1dad3); }
+.dispatch-stage .dispatch-stage__wall { fill: var(--lab-wall, #e7e8df); }
+.dispatch-stage .dispatch-stage__vent { fill: var(--lab-alloy, #c6d2c9); }
+.dispatch-stage .dispatch-stage__construction { opacity: 0.4; }
+.dispatch-stage .dispatch-stage__hatch { fill: none; stroke: var(--lab-cel, #45636e); stroke-width: 1; opacity: 0.25; }
+.dispatch-stage .dispatch-stage__tone { fill: var(--lab-ink, #24343d); opacity: 0.18; }
+
+.dispatch-stage .dispatch-stage__project {
+  fill: var(--lab-ink, #24343d);
+  font-family: Impact, "Arial Narrow", "Segoe UI", sans-serif;
+  font-size: 48px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.dispatch-stage .dispatch-stage__room-label {
+  fill: var(--lab-ink, #24343d);
+  font-family: "Segoe UI", Arial, sans-serif;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.09em;
+}
+
+.dispatch-stage .dispatch-stage__connections,
+.dispatch-stage .dispatch-stage__active-connection,
+.dispatch-stage .dispatch-stage__courier { pointer-events: none; }
+
+.dispatch-stage .dispatch-stage__connection {
+  fill: none;
+  stroke: var(--lab-cel, #45636e);
+  stroke-width: 2;
+  stroke-dasharray: 9 8;
+  opacity: 0.25;
+}
+
+.dispatch-stage .dispatch-stage__route-under {
+  fill: none;
+  stroke: var(--lab-paper, #f2f0e5);
+  stroke-width: 10;
+  stroke-linecap: round;
+}
+
+.dispatch-stage .dispatch-stage__route {
+  fill: none;
+  stroke: var(--lab-accent, #b84331);
+  stroke-width: 3.5;
+  stroke-dasharray: 10 7;
+}
+
+.dispatch-stage .dispatch-stage__arrow {
+  fill: none;
+  stroke: var(--lab-accent, #b84331);
+  stroke-width: 2.4;
+}
+
+.dispatch-stage .dispatch-stage__courier-trail {
+  fill: none;
+  stroke: var(--lab-paper, #f2f0e5);
+  stroke-width: 4;
+}
+
+.dispatch-stage .dispatch-machine { cursor: pointer; }
+.dispatch-stage .dispatch-machine:focus { outline: none; }
+.dispatch-stage .dispatch-machine__focus { fill: none; stroke: var(--lab-paper, #f2f0e5); stroke-width: 5; opacity: 0; }
+.dispatch-stage .dispatch-machine:hover .dispatch-machine__focus { opacity: 1; }
+.dispatch-stage .dispatch-machine--selected .dispatch-machine__focus { stroke: var(--lab-accent, #b84331); stroke-width: 4; opacity: 1; }
+.dispatch-stage .dispatch-machine:focus-visible .dispatch-machine__focus { stroke: var(--lab-focus, #194eaa); stroke-width: 6; opacity: 1; }
+.dispatch-stage .dispatch-machine__port { fill: var(--lab-paper, #f2f0e5); stroke: var(--lab-ink, #24343d); stroke-width: 3; }
+.dispatch-stage .dispatch-machine--source .dispatch-machine__port { fill: var(--lab-steel, #7d969d); }
+.dispatch-stage .dispatch-machine--destination .dispatch-machine__port { fill: var(--lab-signal, #c9513c); stroke-width: 4; }
+
+.dispatch-stage .dispatch-machine__label {
+  fill: var(--lab-ink, #24343d);
+  stroke: var(--lab-paper, #f2f0e5);
+  stroke-width: 5;
+  stroke-linejoin: round;
+  paint-order: stroke fill;
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-size: 20px;
+  font-weight: 650;
+}
+
+.dispatch-stage .dispatch-stage__caption {
+  position: absolute;
+  left: 14px;
+  bottom: 12px;
+  max-width: min(610px, calc(100% - 28px));
+  padding: 8px 12px;
+  color: var(--lab-ink, #24343d);
+  background: var(--lab-paper, #f2f0e5);
+  border: 1px solid var(--lab-line, #a8b8b2);
+  pointer-events: none;
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.dispatch-stage .dispatch-stage__caption p { margin: 0; }
+.dispatch-stage .dispatch-stage__context { font-weight: 650; }
+.dispatch-stage .dispatch-stage__caption .dispatch-stage__note { margin-top: 3px; font-size: 11px; }
+
+.dispatch-stage .dispatch-stage__destination-cue {
+  position: absolute;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  max-width: min(220px, calc(100% - 24px));
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 2px solid var(--lab-accent, #b84331);
+  border-radius: 2px;
+  background: var(--lab-paper, #f2f0e5);
+  color: var(--lab-ink, #24343d);
+  box-shadow: 0 3px 0 #24343d25;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.dispatch-stage .dispatch-stage__destination-cue > span:first-child { font-size: 23px; color: var(--lab-accent, #b84331); }
+.dispatch-stage .dispatch-stage__destination-cue[data-edge="left"] { left: 12px; transform: translateY(-50%); }
+.dispatch-stage .dispatch-stage__destination-cue[data-edge="right"] { right: 12px; transform: translateY(-50%); }
+.dispatch-stage .dispatch-stage__destination-cue[data-edge="top"] { top: 52px; transform: translateX(-50%); }
+.dispatch-stage .dispatch-stage__destination-cue[data-edge="bottom"] { bottom: 70px; transform: translateX(-50%); }
+
+@media (max-width: 700px) {
+  .dispatch-stage { height: var(--lab-stage-height, clamp(360px, 55svh, 580px)); }
+  .dispatch-stage .dispatch-stage__caption { left: 9px; bottom: 9px; max-width: calc(100% - 18px); padding: 7px 9px; }
+  .dispatch-stage .dispatch-stage__note { font-size: 10px; }
+}

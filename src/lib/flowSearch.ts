@@ -1,10 +1,10 @@
 import type { BlueprintFlow } from "./blueprint";
 
-export function filterFlows(
-  flows: BlueprintFlow[],
-  tags: string[] | undefined,
+export function filterFlows<T extends Pick<BlueprintFlow, "id" | "label" | "trigger">>(
+  flows: readonly T[],
+  tags: readonly string[] | undefined,
   query: string,
-): BlueprintFlow[] {
+): readonly T[] {
   const normalizedQuery = query.trim().toLowerCase();
   if (!normalizedQuery) return flows;
 
@@ -13,4 +13,12 @@ export function filterFlows(
       value?.toLowerCase().includes(normalizedQuery),
     ),
   );
+}
+
+export function queryForSelectedFlow(
+  flow: Pick<BlueprintFlow, "id" | "label" | "trigger">,
+  tags: readonly string[] | undefined,
+  query: string,
+): string {
+  return filterFlows([flow], tags, query).length ? query : "";
 }
