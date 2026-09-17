@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-17T17:02:11.0734253Z",
+  "title": "Design System: Dispatch Lab",
+  "extensions": {
+    "shadows": [
+      { "name": "popover", "value": "0 8px 22px #24343d24", "purpose": "Access and purpose popovers above otherwise flat chrome." },
+      { "name": "destination-edge", "value": "0 3px 0 #24343d25", "purpose": "A short structural offset for a destination continuation." }
+    ],
+    "motion": [
+      { "name": "handoff-motion", "value": "1600ms", "purpose": "Authored sender preparation, envelope travel and receiver acknowledgement; not execution time." },
+      { "name": "handoff-reading", "value": "1200ms", "purpose": "Readable pause between normal-motion handoff occurrences." },
+      { "name": "static-reading", "value": "2500ms", "purpose": "Paced static handoffs when reduced motion is preferred." },
+      { "name": "travel-easing", "value": "t * t * (3 - 2 * t)", "purpose": "Envelope travel within the middle portion of a handoff." }
+    ],
+    "breakpoints": [
+      { "name": "compact-chrome", "value": "1050px" },
+      { "name": "mobile-application", "value": "760px" },
+      { "name": "compact-stage-caption", "value": "700px" }
+    ],
+    "focus": {
+      "value": "3px solid var(--lab-accent)",
+      "offset": "4px",
+      "purpose": "Visible keyboard focus on application controls."
+    }
+  },
+  "components": [
+    {
+      "name": "Primary playback button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The explicit entry to a controllable declared-flow walkthrough.",
+      "html": "<button class=\"ds-play\">Play full flow</button>",
+      "css": ".ds-play{font:650 16px 'Segoe UI',Arial,sans-serif;min-height:44px;padding:9px 14px;border:1px solid var(--lab-accent,#b43e2e);border-radius:3px;background:var(--lab-accent,#b43e2e);color:#fffaf1}.ds-play:hover{background:#933124;border-color:#933124}.ds-play:focus-visible{outline:3px solid var(--lab-accent,#b43e2e);outline-offset:4px}.ds-play:disabled{opacity:.5;cursor:default}"
+    },
+    {
+      "name": "Secondary action",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "A quiet, familiar action alongside the primary walkthrough.",
+      "html": "<button class=\"ds-secondary\">Reload application</button>",
+      "css": ".ds-secondary{font:16px 'Segoe UI',Arial,sans-serif;min-height:44px;padding:9px 14px;border:1px solid var(--lab-line,#8ca09f);border-radius:3px;background:#fbfaf3;color:var(--lab-ink,#24343d)}.ds-secondary:hover{border-color:var(--lab-ink,#24343d);background:#e2e8df}.ds-secondary:focus-visible{outline:3px solid var(--lab-accent,#b43e2e);outline-offset:4px}"
+    },
+    {
+      "name": "Flow search",
+      "kind": "input",
+      "refersTo": "input-search",
+      "description": "Searches only the visible flow list while preserving selection consistency.",
+      "html": "<input class=\"ds-search\" type=\"search\" aria-label=\"Search flows by name or tag\" placeholder=\"Find a flow…\">",
+      "css": ".ds-search{font:14px 'Segoe UI',Arial,sans-serif;min-height:44px;padding:9px 12px;border:1px solid var(--lab-line,#8ca09f);border-radius:3px;background:#fbfaf3;color:var(--lab-ink,#24343d)}.ds-search::placeholder{color:var(--lab-muted,#4f656b);opacity:1}.ds-search:focus-visible{outline:3px solid var(--lab-accent,#b43e2e);outline-offset:4px}"
+    },
+    {
+      "name": "Presentation switch",
+      "kind": "nav",
+      "refersTo": "view-selected",
+      "description": "Separates the illustrated lab from the precise technical map.",
+      "html": "<nav class=\"ds-views\" aria-label=\"Presentation\"><button aria-pressed=\"true\">Lab</button><button aria-pressed=\"false\">Diagram</button></nav>",
+      "css": ".ds-views{display:flex}.ds-views button{font:13px 'Segoe UI',Arial,sans-serif;min-height:44px;padding:9px 14px;border:1px solid var(--lab-line,#8ca09f);border-radius:0;background:#fbfaf3;color:var(--lab-ink,#24343d)}.ds-views button+button{border-left:0}.ds-views button[aria-pressed=true]{background:var(--lab-ink,#24343d);color:var(--lab-paper,#f2f0e5);border-color:var(--lab-ink,#24343d)}.ds-views button:focus-visible{outline:3px solid var(--lab-accent,#b43e2e);outline-offset:4px}"
+    },
+    {
+      "name": "Destination continuation",
+      "kind": "custom",
+      "refersTo": "destination-cue",
+      "description": "A labelled, actionable continuation when the destination leaves a focused view.",
+      "html": "<button class=\"ds-cue\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M20 12H4m6-6-6 6 6 6\"/></svg><span>To <strong>HTTP trigger</strong></span></button>",
+      "css": ".ds-cue{display:inline-flex;align-items:center;gap:9px;max-width:220px;min-height:44px;padding:8px 12px;border:2px solid var(--lab-accent,#b43e2e);border-radius:2px;background:var(--lab-paper,#f2f0e5);color:var(--lab-ink,#24343d);box-shadow:0 3px 0 #24343d25;font:13px/1.4 'Segoe UI',Arial,sans-serif;text-align:left}.ds-cue svg{width:23px;height:23px;fill:none;stroke:var(--lab-accent,#b43e2e);stroke-width:2}.ds-cue:focus-visible{outline:3px solid var(--lab-accent,#b43e2e);outline-offset:4px}"
+    },
+    {
+      "name": "Handoff narration",
+      "kind": "custom",
+      "description": "A prominent schema-derived caption rather than a small technical footnote.",
+      "html": "<div class=\"ds-caption\"><span aria-hidden=\"true\">“</span><p>Timer → Function App — <strong>fires</strong></p></div>",
+      "css": ".ds-caption{display:flex;gap:9px;align-items:flex-start;color:var(--lab-ink,#24343d)}.ds-caption>span{font:36px/1 Georgia,serif;color:var(--lab-accent,#b43e2e)}.ds-caption p{margin:0;font:600 20px/1.55 'Segoe UI',Arial,sans-serif}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The illustrated technical lab",
+    "overview": "Dispatch Lab gives software components a recognizable mechanical vocabulary: angular machines, a lean agent figure, sealed mechanisms and precise labels. Graphite outlines, steel surfaces, paper highlights and vermilion signals carry the identity. This is the user-selected graphic-novel direction, not a borrowed PortaBaltica theme or a generic dashboard.\n\nThe illustration invites investigation; the information remains literal. Component names, handoff labels and relationships come from the blueprint. Room bays adapt to the actual content rather than preserving one sample's coordinates or inventing a decorative agent.",
+    "keyCharacteristics": ["original cel illustration", "restrained signal colour", "readable technical information", "controllable motion", "explicit uncertainty"],
+    "rules": [],
+    "dos": ["Do reuse the mechanism vocabulary for every supported node kind.", "Do preserve repeated handoffs, loops and explicit source changes.", "Do maintain keyboard, touch and reduced-motion equivalents.", "Do keep labels and actionable information readable outside the illustration."],
+    "donts": ["Don't present presentation timing as agent latency or throughput.", "Don't infer relationships from room placement.", "Don't copy real execution traces or secrets into the public blueprint.", "Don't introduce trackers, remote runtime assets or remote fonts."]
+  }
+}

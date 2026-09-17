@@ -16,16 +16,15 @@ import type {
   BlueprintNode,
 } from "../lib/blueprint";
 import { layoutNodes } from "../lib/layout";
+import "@xyflow/react/dist/style.css";
 
-// Distinct, accessible palette for up to 6 concurrent flows.
-// Avoids pure neon, keeps contrast above 4.5:1 on the dark canvas.
 const FLOW_COLORS = [
-  "#6c8cff", // accent blue
-  "#3DC9A0", // brand emerald (matches nauroLabs)
-  "#f59e0b", // amber
-  "#f43f5e", // rose
-  "#a78bfa", // violet
-  "#38bdf8", // sky
+  "#b43e2e",
+  "#2d6972",
+  "#805d1d",
+  "#8d4268",
+  "#655084",
+  "#386287",
 ];
 
 interface BlueprintCanvasProps {
@@ -34,6 +33,8 @@ interface BlueprintCanvasProps {
   flowId: string;
   /** When true, redact `private` nodes and skip `private` flows. */
   redactPrivate: boolean;
+  onSelectNode?: (nodeId: string) => void;
+  animateEdges?: boolean;
 }
 
 interface NodeData {
@@ -55,7 +56,7 @@ function BlueprintNodeView({ data }: NodeProps<Node<NodeData>>) {
         `${redacted ? " redacted" : ""}${dim ? " dim" : ""}`
       }
       data-kind={node.kind}
-      title={node.resource ?? ""}
+      title={redacted ? "Restricted component" : node.resource ?? ""}
     >
       <Handle type="target" position={Position.Left} />
       <div className="kind">
@@ -88,6 +89,8 @@ export function BlueprintCanvas({
   blueprint,
   flowId,
   redactPrivate,
+  onSelectNode,
+  animateEdges = false,
 }: BlueprintCanvasProps) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
 
@@ -110,7 +113,10 @@ export function BlueprintCanvas({
     return ids;
   }, [blueprint, flowId, visibleFlows]);
 
-  const visibleNodes = blueprint.nodes.filter((n) => visibleNodeIds.has(n.id));
+  const visibleNodes = useMemo(
+    () => blueprint.nodes.filter((n) => visibleNodeIds.has(n.id)),
+    [blueprint.nodes, visibleNodeIds],
+  );
   const laidOut = useMemo(
     () => layoutNodes(visibleNodes, visibleFlows),
     [visibleNodes, visibleFlows],
@@ -160,19 +166,19 @@ export function BlueprintCanvas({
         source: step.from,
         target: step.to,
         label: step.label,
-        animated: !isDim,
+        animated: animateEdges && !isDim,
         style: {
           stroke: color,
           strokeWidth: isDim ? 1 : 1.8,
           opacity: isDim ? 0.15 : 0.95,
         },
         labelStyle: {
-          fill: "#dbe1ef",
+          fill: "#24343d",
           fontSize: 11,
           fontWeight: 500,
           opacity: isDim ? 0.2 : 1,
         },
-        labelBgStyle: { fill: "#0f1830", fillOpacity: 0.85 },
+        labelBgStyle: { fill: "#f2f0e5", fillOpacity: 0.95 },
         labelBgPadding: [4, 6],
         labelBgBorderRadius: 4,
       });
@@ -203,12 +209,13 @@ export function BlueprintCanvas({
         requestAnimationFrame(() => instance.fitView({ padding: 0.18 }));
       }}
       proOptions={{ hideAttribution: true }}
-      defaultEdgeOptions={{ animated: true }}
+      defaultEdgeOptions={{ animated: animateEdges }}
+      onNodeClick={(_, node) => onSelectNode?.(node.id)}
       onNodeMouseEnter={(_, n) => setHoveredNode(n.id)}
       onNodeMouseLeave={() => setHoveredNode(null)}
       onPaneClick={() => setHoveredNode(null)}
     >
-      <Background variant={BackgroundVariant.Dots} color="#1a2440" gap={24} size={1} />
+      <Background variant={BackgroundVariant.Dots} color="#a7b5b2" gap={24} size={1} />
       <Controls showInteractive={false} />
     </ReactFlow>
   );
