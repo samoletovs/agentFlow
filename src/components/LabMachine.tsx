@@ -1,5 +1,6 @@
-import { memo, type ReactElement } from "react";
+import { memo, useCallback, useRef, type ReactElement } from "react";
 import {
+  DISPATCH_LABEL_FONT,
   dispatchNodeLabel,
   type DispatchMechanism,
   type DispatchPlacement,
@@ -13,7 +14,13 @@ interface LabMachineProps {
   readonly senderPose: number;
   readonly receiverPose: number;
   readonly onSelectNode: (nodeId: string) => void;
+  readonly keyboardFocused: boolean;
+  readonly registerMachine: (nodeId: string, element: SVGGElement | null) => void;
+  readonly onFocusMachine: (nodeId: string, focusVisible: boolean) => void;
+  readonly onBlurMachine: (nodeId: string) => void;
 }
+
+const LABEL_STYLE = { font: DISPATCH_LABEL_FONT };
 
 const MACHINE_ART: Record<DispatchMechanism, ReactElement> = {
   trigger: (
@@ -233,8 +240,16 @@ export const LabMachine = memo(function LabMachine({
   senderPose,
   receiverPose,
   onSelectNode,
+  keyboardFocused,
+  registerMachine,
+  onFocusMachine,
+  onBlurMachine,
 }: LabMachineProps) {
   const { node, mechanism, spec, labelLines } = placement;
+  const pointerFocus = useRef(false);
+  const register = useCallback((element: SVGGElement | null) => {
+    registerMachine(node.id, element);
+  }, [node.id, registerMachine]);
   const label = dispatchNodeLabel(node);
   const sealed = mechanism === "restricted" || mechanism === "secret";
   const transform = sealed ? undefined :
@@ -244,11 +259,13 @@ export const LabMachine = memo(function LabMachine({
 
   return (
     <g
+      ref={register}
       className={[
         "dispatch-machine",
         selected && "dispatch-machine--selected",
         source && "dispatch-machine--source",
         destination && "dispatch-machine--destination",
+        keyboardFocused && "dispatch-machine--keyboard-focused",
       ].filter(Boolean).join(" ")}
       transform={`translate(${placement.x} ${placement.y})`}
       data-testid="dispatch-machine"
@@ -259,8 +276,21 @@ export const LabMachine = memo(function LabMachine({
       tabIndex={0}
       aria-label={`${label}. ${node.restricted ? "Sealed private component" : node.kind}. Inspect component.`}
       aria-pressed={selected}
+      onPointerDown={() => { pointerFocus.current = true; }}
+      onPointerUp={() => { pointerFocus.current = false; }}
+      onPointerCancel={() => { pointerFocus.current = false; }}
+      onFocus={(event) => {
+        const focusVisible = !pointerFocus.current && event.currentTarget.matches(":focus-visible");
+        pointerFocus.current = false;
+        onFocusMachine(node.id, focusVisible);
+      }}
+      onBlur={() => {
+        pointerFocus.current = false;
+        onBlurMachine(node.id);
+      }}
       onClick={() => onSelectNode(node.id)}
       onKeyDown={(event) => {
+        pointerFocus.current = false;
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
           event.stopPropagation();
@@ -283,7 +313,7 @@ export const LabMachine = memo(function LabMachine({
           </g>
         </g>
         <circle cx={spec.port.x} cy={spec.port.y} r="7" className="dispatch-machine__port" />
-        <text className="dispatch-machine__label" textAnchor="middle">
+        <text className="dispatch-machine__label" textAnchor="middle" style={LABEL_STYLE}>
           {labelLines.map((line, index) => <tspan key={index} x="0" y={150 + index * 23}>{line}</tspan>)}
         </text>
       </g>

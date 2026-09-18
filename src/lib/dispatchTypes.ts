@@ -66,4 +66,6 @@ export interface DispatchStageProps {
   readonly reducedMotion: boolean;
   readonly showContextCaption?: boolean;
   readonly onSelectNode: (nodeId: string) => void;
+  readonly onFocusNode?: (nodeId: string) => void;
+  readonly focusRequest?: { readonly nodeId: string; readonly requestId: number };
 }

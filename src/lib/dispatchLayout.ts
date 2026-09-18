@@ -71,6 +71,10 @@ export interface DispatchDestinationCue {
 
 const COLUMN_PITCH = 292;
 const ROW_PITCH = 318;
+export const DISPATCH_LABEL_MAX_WIDTH = 244;
+export const DISPATCH_LABEL_FONT = '650 20px "Segoe UI", "Helvetica Neue", Arial, sans-serif';
+export type DispatchLabelMeasurer = (text: string) => number;
+const labelSegmenter = new Intl.Segmenter("en", { granularity: "grapheme" });
 const ROLE_ORDER: Record<NodeKind, number> = {
   channel: 0,
   trigger: 1,
@@ -126,28 +130,70 @@ export function dispatchMechanism(node: DispatchNode): DispatchMechanism {
   return node.kind;
 }
 
-export function wrapDispatchLabel(label: string, limit = 25): readonly string[] {
-  const characters = Array.from(label.replace(/\s+/g, " ").trim());
-  if (characters.length <= limit) return [characters.join("")];
-  let split = limit;
-  for (let index = limit; index >= Math.floor(limit * 0.55); index -= 1) {
+export function estimateDispatchLabelWidth(text: string): number {
+  return Array.from(text).reduce((width, character) => {
+    if (/\p{Mark}/u.test(character) || character === "\u200d") return width;
+    if (character === " ") return width + 6;
+    if (/[ilI1.,'`:;!|]/.test(character)) return width + 7;
+    if (/[MW@%]/.test(character) || character.codePointAt(0)! > 127) return width + 22;
+    if (/[mw]/.test(character)) return width + 18;
+    return width + (/[A-Z]/.test(character) ? 15 : 12);
+  }, 0);
+}
+
+export function createDispatchLabelMeasurer(): DispatchLabelMeasurer {
+  if (typeof document === "undefined") return estimateDispatchLabelWidth;
+  const context = document.createElement("canvas").getContext("2d");
+  if (!context) return estimateDispatchLabelWidth;
+  context.font = DISPATCH_LABEL_FONT;
+  return (text) => {
+    const metrics = context.measureText(text);
+    return Math.max(metrics.width, metrics.actualBoundingBoxLeft + metrics.actualBoundingBoxRight);
+  };
+}
+
+export function wrapDispatchLabel(
+  label: string,
+  limit = 25,
+  measure: DispatchLabelMeasurer = estimateDispatchLabelWidth,
+): readonly string[] {
+  const normalized = label.replace(/\s+/g, " ").trim();
+  const characters = Array.from(labelSegmenter.segment(normalized), ({ segment }) => segment);
+  const fit = (parts: readonly string[], suffix = "") => {
+    let low = 0;
+    let high = Math.min(limit - (suffix ? 1 : 0), parts.length);
+    while (low < high) {
+      const middle = Math.ceil((low + high) / 2);
+      if (measure(parts.slice(0, middle).join("") + suffix) <= DISPATCH_LABEL_MAX_WIDTH) low = middle;
+      else high = middle - 1;
+    }
+    return low;
+  };
+  const firstLength = fit(characters);
+  if (firstLength === characters.length) return [normalized];
+  if (firstLength === 0) return ["…"];
+  let split = firstLength;
+  for (let index = firstLength; index >= Math.ceil(firstLength * 0.55); index -= 1) {
     if ([" ", "_", "-", "/"].includes(characters[index - 1])) {
       split = index;
       break;
     }
   }
-  const remainder = characters.slice(split).join("").trim();
+  const remainder = characters.slice(split);
+  while (remainder[0] === " ") remainder.shift();
+  const secondLength = fit(remainder);
   return [
     characters.slice(0, split).join("").trim(),
-    Array.from(remainder).length > limit
-      ? `${Array.from(remainder).slice(0, limit - 1).join("")}…`
-      : remainder,
+    secondLength < remainder.length
+      ? `${remainder.slice(0, fit(remainder, "…")).join("").trimEnd()}…`
+      : remainder.join(""),
   ];
 }
 
 export function layoutDispatchRoom(
   nodes: readonly DispatchNode[],
   flows: readonly DispatchFlow[],
+  measureLabel: DispatchLabelMeasurer = estimateDispatchLabelWidth,
 ): DispatchLayout {
   const ids = new Set(nodes.map((node) => node.id));
   if (ids.size !== nodes.length) {
@@ -184,7 +230,7 @@ export function layoutDispatchRoom(
       spec: machine,
       port: { x: x + machine.port.x, y: y + machine.port.y },
       coreBounds: { x: x - 122, y: y - 124, width: 244, height: 248 },
-      labelLines: wrapDispatchLabel(dispatchNodeLabel(node)),
+      labelLines: wrapDispatchLabel(dispatchNodeLabel(node), 25, measureLabel),
     };
   });
   const byId = new Map(placements.map((placement) => [placement.node.id, placement]));
@@ -313,7 +359,11 @@ export function dispatchFocusPoint(
   layout: DispatchLayout,
   options: Pick<DispatchStageProps, "activeStep" | "selectedNodeId" | "progress" | "motionVisible" | "paused" | "reducedMotion">,
   courier: DispatchPoint | null,
+  focusedNodeId: string | null = null,
 ): DispatchPoint {
+  const focused = focusedNodeId ? layout.byId.get(focusedNodeId) : undefined;
+  // Centre the whole mechanism and its caption, rather than its offset handoff port.
+  if (focused) return { x: focused.x, y: focused.y + 24 };
   const selected = options.selectedNodeId ? layout.byId.get(options.selectedNodeId)?.port : undefined;
   const source = options.activeStep ? layout.byId.get(options.activeStep.from)?.port : undefined;
   const destination = options.activeStep ? layout.byId.get(options.activeStep.to)?.port : undefined;

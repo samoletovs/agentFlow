@@ -127,6 +127,9 @@ local system faces, with exact technical names preserved. The prominent
 handoff caption combines endpoint names and the declared action; on mobile its
 text becomes 18px rather than being relegated to small metadata. Resource
 identifiers may use code typography in the inspector.
+Illustrated labels are wrapped to a measured width, not just a character count.
+Elision may bound a long caption, but its complete accessible name and inspector
+text must remain available.
 
 All fonts are local/system fonts. No remote font service is part of the design.
 
@@ -146,9 +149,15 @@ focused relationship. If its destination is outside the viewport, a labelled
 directional cue makes the continuation explicit and opens that component.
 Whole-lab overview remains a deliberate zoomed-out option.
 
+Keyboard focus reveals the focused mechanism without selecting a different
+handoff or opening its inspector. Logical component focus survives inspector
+dismissal even when the original directional cue no longer exists.
+
 Component inspection sits beside the stage on wide screens and below it on
 narrow screens. Preserve useful world space and a visible primary playback
 action; do not shrink the whole graph into the only mobile experience.
+Compact header and access-note contents may wrap when text is enlarged; keep
+their actions available rather than hiding overflow.
 
 ## Elevation & Depth
 
@@ -175,6 +184,9 @@ tooltip and inspector must not recover private details through a visual alias.
 navigation and Stop/reset must be visibly distinct. The same progress value
 drives sender preparation, envelope travel and receiver acknowledgement.
 Animation explains declared occurrences; it is not a live execution.
+Reading panels pause the walkthrough. Returning to the lab never resumes it
+without an explicit action, and an outline selection reveals the lab before
+starting the selected handoff.
 
 **Handoff caption.** Give the relationship and its declared action the reading
 weight of a graphic-novel caption. Preserve exact names; do not invent a

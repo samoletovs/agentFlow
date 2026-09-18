@@ -21,7 +21,13 @@ export function DispatchApplication({ blueprints, allowlist, nodeKinds }: Props)
   const [guideOpen, setGuideOpen] = useState(false);
   const [auth, setAuth] = useState<ViewerAuth>({ ...PUBLIC_VIEWER, status: "loading" });
   const [authAttempt, setAuthAttempt] = useState(0);
+  const [pauseRequest, setPauseRequest] = useState(0);
   const agentButton = useRef<HTMLButtonElement>(null);
+  const guideButton = useRef<HTMLButtonElement>(null);
+
+  function pauseForReading() {
+    setPauseRequest((request) => request + 1);
+  }
 
   useEffect(() => {
     const controller = new AbortController();
@@ -51,6 +57,11 @@ export function DispatchApplication({ blueprints, allowlist, nodeKinds }: Props)
     agentButton.current?.focus();
   }
 
+  function closeGuide() {
+    setGuideOpen(false);
+    guideButton.current?.focus();
+  }
+
   if (!blueprint) {
     return <main className="lab-error" role="alert"><h1>No agent blueprint is available.</h1><p>Add a valid blueprint before opening Dispatch Lab.</p></main>;
   }
@@ -67,6 +78,7 @@ export function DispatchApplication({ blueprints, allowlist, nodeKinds }: Props)
           aria-controls="agent-catalogue"
           aria-expanded={catalogueOpen}
           onClick={() => {
+            if (!catalogueOpen) pauseForReading();
             setCatalogueOpen((open) => !open);
             setGuideOpen(false);
           }}
@@ -75,11 +87,13 @@ export function DispatchApplication({ blueprints, allowlist, nodeKinds }: Props)
         </button>
         <nav className="site-actions" aria-label="Lab information and access">
           <button
+            ref={guideButton}
             className="text-button"
             aria-label="How to read the lab"
             aria-expanded={guideOpen}
             aria-controls="lab-guide"
             onClick={() => {
+              if (!guideOpen) pauseForReading();
               setGuideOpen((open) => !open);
               setCatalogueOpen(false);
             }}
@@ -87,7 +101,9 @@ export function DispatchApplication({ blueprints, allowlist, nodeKinds }: Props)
           {auth.status === "loading" ? (
             <span className="access-check" role="status">Checking access…</span>
           ) : auth.status === "signed-in" ? (
-            <details className="access-details">
+            <details className="access-details" onToggle={(event) => {
+              if (event.currentTarget.open) pauseForReading();
+            }}>
               <summary className={auth.allowed ? "access-full" : ""}>{auth.allowed ? "Full view" : "Restricted view"}</summary>
               <div className="access-popover">
                 <strong>Signed in</strong>
@@ -141,8 +157,13 @@ export function DispatchApplication({ blueprints, allowlist, nodeKinds }: Props)
       ) : null}
 
       {guideOpen ? (
-        <section id="lab-guide" className="lab-guide" aria-labelledby="guide-title">
-          <div className="panel-heading"><h2 id="guide-title">An illustration of a real blueprint</h2><button onClick={() => setGuideOpen(false)} aria-label="Close lab guide">×</button></div>
+        <section id="lab-guide" className="lab-guide" aria-labelledby="guide-title" onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            closeGuide();
+          }
+        }}>
+          <div className="panel-heading"><h2 id="guide-title">An illustration of a real blueprint</h2><button onClick={closeGuide} aria-label="Close lab guide">×</button></div>
           <div className="guide-columns">
             <div>
               <p>Each mechanism represents a declared software component. Room positions group roles, not execution order; only arrows declare relationships. Select a mechanism to inspect its responsibility and connections, or choose a flow to follow its handoffs.</p>
@@ -157,7 +178,7 @@ export function DispatchApplication({ blueprints, allowlist, nodeKinds }: Props)
       ) : null}
 
       <BlueprintErrorBoundary key={blueprint.project}>
-        <DispatchLab key={blueprint.project} blueprint={blueprint} redactPrivate={!auth.allowed} />
+        <DispatchLab key={blueprint.project} blueprint={blueprint} redactPrivate={!auth.allowed} pauseRequest={pauseRequest} />
       </BlueprintErrorBoundary>
     </div>
   );

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import agentMode from "../blueprints/agentMode.json";
 import atlas from "../blueprints/atlas.json";
 import autoRefine from "../blueprints/autoRefine.json";
@@ -8,6 +8,9 @@ import turgo from "../blueprints/turgo.json";
 import type { NodeKind } from "./blueprint";
 import type { DispatchFlow, DispatchNode, DispatchStep } from "./dispatchTypes";
 import {
+  createDispatchLabelMeasurer,
+  DISPATCH_LABEL_FONT,
+  DISPATCH_LABEL_MAX_WIDTH,
   dispatchCurve,
   dispatchCurvePath,
   dispatchDestinationCue,
@@ -15,6 +18,7 @@ import {
   dispatchFollowView,
   dispatchMechanism,
   dispatchPlaybackPose,
+  estimateDispatchLabelWidth,
   layoutDispatchRoom,
   pointOnDispatchCurve,
   resolveDispatchStep,
@@ -170,6 +174,111 @@ describe("Dispatch room layout", () => {
   });
 });
 
+describe("width-bounded Dispatch labels", () => {
+  const graphemes = new Intl.Segmenter("en", { granularity: "grapheme" });
+  const measuredWidth = (text: string) => Array.from(graphemes.segment(text)).reduce(
+    (width, { segment }) => width + (segment === "W" ? 20.16 : segment === "M" ? 19.12 : 12),
+    0,
+  );
+
+  it.each([
+    ["wide W", "W".repeat(50), measuredWidth],
+    ["wide M", "M".repeat(50), measuredWidth],
+    ["monospace", "component0123456789".repeat(3), (text: string) => Array.from(text).length * 12],
+    ["Unicode", "\u6a5f\u5668".repeat(25), (text: string) => Array.from(text).length * 20],
+    ["underscores", "get_WWWW_context_".repeat(3), measuredWidth],
+  ])("fits %s labels without shrinking type or changing the full name", (_name, label, measure) => {
+    const layout = layoutDispatchRoom([
+      { ...node("one"), label },
+      { ...node("two"), label },
+    ], [], measure);
+    for (const placement of layout.placements) {
+      expect(placement.node.label).toBe(label);
+      expect(placement.labelLines).toHaveLength(2);
+      expect(placement.labelLines[1]).toMatch(/…$/);
+      for (const line of placement.labelLines) {
+        expect(measure(line)).toBeLessThanOrEqual(DISPATCH_LABEL_MAX_WIDTH);
+        expect(placement.x - measure(line) / 2).toBeGreaterThanOrEqual(placement.coreBounds.x);
+        expect(placement.x + measure(line) / 2).toBeLessThanOrEqual(placement.coreBounds.x + placement.coreBounds.width);
+      }
+    }
+    const [a, b] = layout.placements;
+    const right = a.x + Math.max(...a.labelLines.map(measure)) / 2;
+    const left = b.x - Math.max(...b.labelLines.map(measure)) / 2;
+    expect(left - right).toBeGreaterThan(5);
+  });
+
+  it.each(["e\u0301", "\u{1f469}\u200d\u{1f4bb}"])("never splits a grapheme in %s", (unit) => {
+    const measure = (text: string) => Array.from(graphemes.segment(text)).length * 20;
+    const lines = wrapDispatchLabel(unit.repeat(40), 25, measure);
+    for (const line of lines) {
+      expect(measure(line)).toBeLessThanOrEqual(DISPATCH_LABEL_MAX_WIDTH);
+      for (const { segment } of graphemes.segment(line)) expect([unit, "…"]).toContain(segment);
+    }
+  });
+
+  it("prefers identifier boundaries and gives deterministic server fallback widths", () => {
+    expect(wrapDispatchLabel("get_context_from_this_component", 25, measuredWidth)[0]).toBe("get_context_from_");
+    expect(createDispatchLabelMeasurer()).toBe(estimateDispatchLabelWidth);
+    for (const label of ["W".repeat(50), "M".repeat(50), "\u6a5f\u5668".repeat(25)]) {
+      const lines = wrapDispatchLabel(label);
+      expect(lines).toEqual(wrapDispatchLabel(label));
+      for (const line of lines) expect(estimateDispatchLabelWidth(line)).toBeLessThanOrEqual(DISPATCH_LABEL_MAX_WIDTH);
+    }
+  });
+
+  it("uses one local canvas and bounded text measurements, including glyph overhang", () => {
+    const measureText = vi.fn((text: string) => ({
+      width: measuredWidth(text),
+      actualBoundingBoxLeft: 2,
+      actualBoundingBoxRight: measuredWidth(text) + 2,
+    }));
+    const context = { font: "", measureText };
+    const getContext = vi.fn(() => context);
+    const createElement = vi.fn(() => ({ getContext }));
+    vi.stubGlobal("document", { createElement });
+    try {
+      const measure = createDispatchLabelMeasurer();
+      expect(context.font).toBe(DISPATCH_LABEL_FONT);
+      const layout = layoutDispatchRoom([{ ...node("wide"), label: "W".repeat(50) }], [], measure);
+      expect(createElement.mock.calls).toEqual([["canvas"]]);
+      expect(getContext.mock.calls).toEqual([["2d"]]);
+      expect(measureText.mock.calls.length).toBeLessThanOrEqual(15);
+      for (const line of layout.placements[0].labelLines) {
+        expect(measuredWidth(line) + 4).toBeLessThanOrEqual(DISPATCH_LABEL_MAX_WIDTH);
+      }
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("uses the deterministic fallback if local canvas measurement is unavailable", () => {
+    vi.stubGlobal("document", { createElement: () => ({ getContext: () => null }) });
+    try {
+      expect(createDispatchLabelMeasurer()).toBe(estimateDispatchLabelWidth);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it.each([agentMode, atlas, autoRefine, foundryLab, mindMe, turgo])(
+    "keeps public and full-view $project labels inside their bays",
+    (fixture) => {
+      const model = fixtureView(fixture);
+      for (const redact of [false, true]) {
+        const nodes = model.nodes.map((node, index) => redact
+          ? node
+          : { ...node, label: fixture.nodes[index].label, restricted: false });
+        const layout = layoutDispatchRoom(nodes, model.flows, measuredWidth);
+        for (const placement of layout.placements) {
+          expect(placement.labelLines.length).toBeLessThanOrEqual(2);
+          for (const line of placement.labelLines) expect(measuredWidth(line)).toBeLessThanOrEqual(DISPATCH_LABEL_MAX_WIDTH);
+        }
+      }
+    },
+  );
+});
+
 describe("controlled Dispatch illustration poses", () => {
   it("uses the preparation, travel, and receiver phases supplied by playback", () => {
     expect(dispatchPlaybackPose(0.075, true, false).sender).toBeCloseTo(1);
@@ -207,6 +316,35 @@ describe("controlled Dispatch illustration poses", () => {
 });
 
 describe("Dispatch focus and destination continuity", () => {
+  it.each([agentMode, atlas, autoRefine, foundryLab, mindMe, turgo])(
+    "frames every keyboard-focused $project mechanism and caption at narrow widths",
+    (fixture) => {
+      const model = fixtureView(fixture);
+      const layout = layoutDispatchRoom(model.nodes, model.flows);
+      const options = {
+        activeStep: model.flows[0].steps[0], selectedNodeId: model.nodes[0].id,
+        progress: 0.4, motionVisible: true, paused: false, reducedMotion: false,
+      };
+      const courier = { x: 410, y: 300 };
+      for (const reducedMotion of [false, true]) {
+        for (const placement of layout.placements) {
+          const focus = dispatchFocusPoint(layout, { ...options, reducedMotion }, courier, placement.node.id);
+          expect(focus).toEqual({ x: placement.x, y: placement.y + 24 });
+          for (const width of [320, 390]) {
+            const view = dispatchFollowView(layout, focus, width / 540);
+            expect(placement.x - 128).toBeGreaterThanOrEqual(view.x);
+            expect(placement.x + 128).toBeLessThanOrEqual(view.x + view.width);
+            expect(placement.y - 131).toBeGreaterThanOrEqual(view.y);
+            expect(placement.y + 178).toBeLessThanOrEqual(view.y + view.height);
+          }
+        }
+      }
+      expect(options.activeStep).toBe(model.flows[0].steps[0]);
+      expect(dispatchFocusPoint(layout, options, courier, null)).toEqual(courier);
+      expect(dispatchFocusPoint(layout, options, courier, "removed")).toEqual(courier);
+    },
+  );
+
   it("follows the current destination during reduced-motion playback, not a retained inspection", () => {
     const flow = flowFor([["trigger", "agent"]]);
     const layout = layoutDispatchRoom(kinds.map((kind) => node(kind, kind)), [flow]);

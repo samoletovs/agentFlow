@@ -1,6 +1,7 @@
-import { memo, useEffect, useId, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { DispatchStageProps } from "../lib/dispatchTypes";
 import {
+  createDispatchLabelMeasurer,
   dispatchCurve,
   dispatchCurvePath,
   dispatchDestinationCue,
@@ -90,6 +91,8 @@ export function DispatchStage({
   reducedMotion,
   showContextCaption = true,
   onSelectNode,
+  onFocusNode,
+  focusRequest,
 }: DispatchStageProps) {
   const instance = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const ids = {
@@ -100,8 +103,13 @@ export function DispatchStage({
     arrow: `dispatch-${instance}-arrow`,
   };
   const root = useRef<HTMLDivElement>(null);
+  const machines = useRef(new Map<string, SVGGElement>());
+  const restoringFocus = useRef(false);
+  const lastFocusRequest = useRef<DispatchStageProps["focusRequest"]>(undefined);
+  const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
   const [viewport, setViewport] = useState({ width: 1280, height: 720 });
-  const layout = useMemo(() => layoutDispatchRoom(nodes, flows), [nodes, flows]);
+  const measureLabel = useMemo(() => createDispatchLabelMeasurer(), []);
+  const layout = useMemo(() => layoutDispatchRoom(nodes, flows, measureLabel), [nodes, flows, measureLabel]);
   const step = useMemo(() => resolveDispatchStep(flows, activeStep), [flows, activeStep]);
   const currentCurve = useMemo(
     () => step ? dispatchCurve(layout, step.from, step.to) : null,
@@ -114,6 +122,35 @@ export function DispatchStage({
       path: dispatchCurvePath(curve),
     }] : [];
   }), [layout]);
+
+  const registerMachine = useCallback((nodeId: string, element: SVGGElement | null) => {
+    if (element) machines.current.set(nodeId, element);
+    else {
+      machines.current.delete(nodeId);
+      setFocusedNodeId((current) => current === nodeId ? null : current);
+    }
+  }, []);
+  const focusMachine = useCallback((nodeId: string, focusVisible: boolean) => {
+    if (!focusVisible || restoringFocus.current) return;
+    setFocusedNodeId(nodeId);
+    onFocusNode?.(nodeId);
+  }, [onFocusNode]);
+  const blurMachine = useCallback((nodeId: string) => {
+    setFocusedNodeId((current) => current === nodeId ? null : current);
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!focusRequest ||
+      (lastFocusRequest.current?.nodeId === focusRequest.nodeId &&
+        lastFocusRequest.current.requestId === focusRequest.requestId)) return;
+    lastFocusRequest.current = focusRequest;
+    const element = machines.current.get(focusRequest.nodeId);
+    if (!element) return;
+    restoringFocus.current = true;
+    element.focus({ preventScroll: true });
+    restoringFocus.current = false;
+    if (document.activeElement === element) focusMachine(focusRequest.nodeId, true);
+  }, [focusRequest, focusMachine]);
 
   useEffect(() => {
     const element = root.current;
@@ -145,7 +182,7 @@ export function DispatchStage({
     : 0;
   const focusPoint = dispatchFocusPoint(layout, {
     activeStep: step, selectedNodeId, progress: pose.progress, motionVisible, paused, reducedMotion,
-  }, courier);
+  }, courier, focusedNodeId);
   const view = viewMode === "follow"
     ? dispatchFollowView(layout, focusPoint, viewport.width / viewport.height)
     : { x: 0, y: 0, width: layout.width, height: layout.height };
@@ -215,6 +252,10 @@ export function DispatchStage({
             senderPose={placement.node.id === source?.node.id ? pose.sender : 0}
             receiverPose={placement.node.id === destination?.node.id ? pose.receiver : 0}
             onSelectNode={onSelectNode}
+            keyboardFocused={placement.node.id === focusedNodeId}
+            registerMachine={registerMachine}
+            onFocusMachine={focusMachine}
+            onBlurMachine={blurMachine}
           />
         ))}
         {currentCurve && (

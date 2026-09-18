@@ -112,7 +112,8 @@
 .dispatch-stage .dispatch-machine__focus { fill: none; stroke: var(--lab-paper, #f2f0e5); stroke-width: 5; opacity: 0; }
 .dispatch-stage .dispatch-machine:hover .dispatch-machine__focus { opacity: 1; }
 .dispatch-stage .dispatch-machine--selected .dispatch-machine__focus { stroke: var(--lab-accent, #b84331); stroke-width: 4; opacity: 1; }
-.dispatch-stage .dispatch-machine:focus-visible .dispatch-machine__focus { stroke: var(--lab-focus, #194eaa); stroke-width: 6; opacity: 1; }
+.dispatch-stage .dispatch-machine:focus-visible .dispatch-machine__focus,
+.dispatch-stage .dispatch-machine--keyboard-focused .dispatch-machine__focus { stroke: var(--lab-focus, #194eaa); stroke-width: 6; opacity: 1; }
 .dispatch-stage .dispatch-machine__port { fill: var(--lab-paper, #f2f0e5); stroke: var(--lab-ink, #24343d); stroke-width: 3; }
 .dispatch-stage .dispatch-machine--source .dispatch-machine__port { fill: var(--lab-steel, #7d969d); }
 .dispatch-stage .dispatch-machine--destination .dispatch-machine__port { fill: var(--lab-signal, #c9513c); stroke-width: 4; }
@@ -123,9 +124,6 @@
   stroke-width: 5;
   stroke-linejoin: round;
   paint-order: stroke fill;
-  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  font-size: 20px;
-  font-weight: 650;
 }
 
 .dispatch-stage .dispatch-stage__caption {
