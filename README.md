@@ -31,12 +31,21 @@ Select a mechanism to inspect its declared responsibility, resource information
 and incoming/outgoing relationships. The agent catalogue describes every
 available blueprint; the lab guide explains the component kinds.
 
+Keyboard navigation keeps the focused mechanism visible in the lab. Closing an
+inspector returns to the component or control that opened it, including when an
+offscreen-destination cue has been replaced by the focused component.
+
 **Play full flow** follows the ordered handoff occurrences, including repeated
 visits and returns. Pause, resume, inspect a component, play a single handoff,
 or stop/reset. The readable outline allows direct step selection. A source
 change is explained explicitly rather than drawn as an invented continuous
 chain. Reduced-motion preferences retain the same information through static
 states.
+
+Opening the catalogue, guide, purpose, access details or handoff outline pauses
+the explanation so it does not advance while you read. Resume is explicit.
+Selecting an outline step brings the illustrated viewport back into view before
+playing that handoff.
 
 **Lab** is the illustrated experience. **Diagram** is a stable technical map
 with the existing pan, zoom and neighborhood inspection; walkthrough animation
@@ -69,7 +78,9 @@ npm run dev
 The Vite development server supplies an anonymous `/.auth/me` response for local
 public-view work. Real Microsoft Entra sign-in is provided by the deployed SWA
 host. Sign-in failures on that host remain fail-closed, with an explicit status
-message and retry action; the client-side allowlist remains in `src/App.tsx`.
+message and retry action. A single ten-second deadline covers both the access
+request and its response body, so a stalled check can be retried. The client-side
+allowlist remains in `src/App.tsx`.
 
 Before submitting a change:
 

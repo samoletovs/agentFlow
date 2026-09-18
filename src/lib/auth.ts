@@ -68,24 +68,53 @@ interface AuthOptions {
   fetcher?: (input: string, init?: RequestInit) => Promise<Response>;
 }
 
+const AUTH_TIMEOUT_MS = 10_000;
+
 export async function loadViewerAuth(
   allowlist: readonly string[],
   { signal, fetcher = fetch }: AuthOptions = {},
 ): Promise<ViewerAuth> {
-  const response = await fetcher("/.auth/me", {
-    signal,
-    credentials: "same-origin",
-    headers: { Accept: "application/json" },
+  signal?.throwIfAborted();
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let abortFromCaller: (() => void) | undefined;
+  const interrupted = new Promise<never>((_, reject) => {
+    const interrupt = (reason: unknown) => {
+      reject(reason);
+      controller.abort(reason);
+    };
+    abortFromCaller = () => interrupt(signal?.reason);
+    signal?.addEventListener("abort", abortFromCaller, { once: true });
+    timer = setTimeout(() => interrupt(new Error(
+      `Sign-in status check timed out after ${AUTH_TIMEOUT_MS / 1000} seconds. Please retry.`,
+    )), AUTH_TIMEOUT_MS);
   });
-  if (!response.ok) {
-    throw new Error(`Sign-in status is unavailable (HTTP ${response.status}).`);
+
+  async function readAuth(): Promise<ViewerAuth> {
+    const response = await fetcher("/.auth/me", {
+      signal: controller.signal,
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    });
+    controller.signal.throwIfAborted();
+    if (!response.ok) {
+      throw new Error(`Sign-in status is unavailable (HTTP ${response.status}).`);
+    }
+    let payload: unknown;
+    try {
+      payload = await response.json();
+    } catch (error) {
+      if (controller.signal.aborted) throw error;
+      throw new Error("The sign-in service returned unreadable data.", { cause: error });
+    }
+    controller.signal.throwIfAborted();
+    return parseViewerAuth(payload, allowlist);
   }
-  let payload: unknown;
+
   try {
-    payload = await response.json();
-  } catch (error) {
-    if (signal?.aborted) throw error;
-    throw new Error("The sign-in service returned unreadable data.", { cause: error });
+    return await Promise.race([readAuth(), interrupted]);
+  } finally {
+    clearTimeout(timer);
+    if (abortFromCaller) signal?.removeEventListener("abort", abortFromCaller);
   }
-  return parseViewerAuth(payload, allowlist);
 }

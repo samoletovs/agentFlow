@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-17T17:02:11.0734253Z",
+  "generatedAt": "2026-09-18T08:41:56.8968380Z",
   "title": "Design System: Dispatch Lab",
   "extensions": {
     "shadows": [
@@ -21,7 +21,13 @@
     "focus": {
       "value": "3px solid var(--lab-accent)",
       "offset": "4px",
-      "purpose": "Visible keyboard focus on application controls."
+      "purpose": "Visible keyboard focus on application controls; focused SVG mechanisms are framed inside the lab, and inspector dismissal restores the logical component."
+    },
+    "interaction": {
+      "readingSurfaces": "Catalogue, guide, purpose, access details and the handoff outline pause the explanation without resetting it.",
+      "outlineNavigation": "Reveal a substantially clipped lab viewport before starting an explicitly selected handoff.",
+      "labelSizing": "Measure local SVG label widths and elide by grapheme while preserving complete accessible names.",
+      "textReflow": "Compact header, access notes and panel headings may wrap when text is enlarged; do not mask document overflow."
     }
   },
   "components": [

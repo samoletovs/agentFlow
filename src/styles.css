@@ -52,6 +52,7 @@ h1, h2, h3, .site-brand, .agent-option-name strong {
 
 .site-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 18px;
   min-height: 66px;
@@ -65,7 +66,7 @@ h1, h2, h3, .site-brand, .agent-option-name strong {
 .brand-accent { color: var(--lab-accent); }
 .site-caption { padding-left: 18px; border-left: 1px solid var(--lab-line); font-size: 14px; font-weight: 600; }
 .agent-menu-toggle { display: inline-flex; align-items: center; gap: 15px; padding-inline: 12px; background: transparent; border-color: transparent; font-weight: 650; }
-.site-actions { margin-left: auto; display: flex; align-items: center; gap: 18px; min-width: 0; font-size: 13px; }
+.site-actions { margin-left: auto; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 18px; min-width: 0; max-width: 100%; font-size: 13px; }
 .text-button { background: transparent; border-color: transparent; text-decoration: underline; text-underline-offset: 4px; }
 .sign-in-link { display: inline-flex; min-height: 44px; align-items: center; white-space: nowrap; }
 .access-check { color: var(--lab-muted); font-size: 12px; }
@@ -80,14 +81,15 @@ h1, h2, h3, .site-brand, .agent-option-name strong {
 .access-error { background: #fae5d8; border-bottom: 1px solid #ae6d52; }
 .access-error button, .search-empty button { padding-block: 5px; min-height: 36px; }
 .search-empty { background: #e6ebe3; border-bottom: 1px solid var(--lab-line); }
-.visibility-note { min-height: 30px; padding-block: 5px; background: #e4e6dd; border-bottom: 1px solid #adb8ae; color: #485e62; font-size: 12px; }
-.visibility-note a { white-space: nowrap; }
+.visibility-note { flex-wrap: wrap; min-height: 30px; padding-block: 5px; background: #e4e6dd; border-bottom: 1px solid #adb8ae; color: #485e62; font-size: 12px; }
+.visibility-note a { white-space: normal; }
 .selection-message { margin: 0; padding: 10px 24px; color: #7d3327; background: #fae5d8; }
 .mobile-label { display: none; }
 
 .agent-catalogue, .lab-guide { padding: 24px; border-bottom: 2px solid var(--lab-ink); background: #e2e7de; }
 .panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 16px; }
 .panel-heading h2 { font-size: 26px; margin: 0; }
+.lab-guide .panel-heading h2 { min-width: 0; overflow-wrap: anywhere; }
 .panel-heading > button { flex: 0 0 44px; width: 44px; padding: 0; font-size: 25px; background: transparent; }
 .agent-index { border-top: 1px solid var(--lab-line); }
 .agent-option { display: grid; grid-template-columns: 180px minmax(0, 1fr) 210px; gap: 24px; width: 100%; padding: 18px 12px; text-align: left; border: 0; border-bottom: 1px solid var(--lab-line); border-radius: 0; background: transparent; }
@@ -227,7 +229,7 @@ h1, h2, h3, .site-brand, .agent-option-name strong {
   .mobile-label { display: inline; }
   .site-header { min-height: 58px; padding: 7px 12px; gap: 6px; }
   .site-brand { font-size: 22px; }
-  .agent-menu-toggle { gap: 7px; padding-inline: 6px; font-size: 13px; max-width: 125px; }
+  .agent-menu-toggle { gap: 7px; padding-inline: 6px; font-size: 13px; min-width: 0; max-width: 100%; }
   .site-actions { gap: 7px; font-size: 12px; }
   .text-button { padding-inline: 7px; }
   .access-check { max-width: 85px; font-size: 11px; }

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { AgentBlueprint } from "../lib/blueprint";
 import type { DispatchNode, DispatchStep } from "../lib/dispatchTypes";
 import { createDispatchModel, getFlowNodes } from "../lib/dispatchModel";
@@ -25,9 +25,10 @@ function useMediaQuery(query: string) {
 interface Props {
   blueprint: AgentBlueprint;
   redactPrivate: boolean;
+  pauseRequest?: number;
 }
 
-export function DispatchLab({ blueprint, redactPrivate }: Props) {
+export function DispatchLab({ blueprint, redactPrivate, pauseRequest = 0 }: Props) {
   const model = useMemo(() => createDispatchModel(blueprint, redactPrivate), [blueprint, redactPrivate]);
   const [selectedFlow, setSelectedFlow] = useState(() => model.flows[0]?.id ?? ALL_FLOWS);
   const [search, setSearch] = useState("");
@@ -35,7 +36,12 @@ export function DispatchLab({ blueprint, redactPrivate }: Props) {
   const [presentation, setPresentation] = useState<"lab" | "diagram">("lab");
   const [chosenView, setChosenView] = useState<"overview" | "follow" | null>(null);
   const [selectionMessage, setSelectionMessage] = useState<string | null>(null);
-  const returnFocus = useRef<Element | null>(null);
+  const returnFocus = useRef<{ element: Element | null; stageNodeId: string | null } | null>(null);
+  const pendingFocusRestore = useRef(false);
+  const focusSequence = useRef(0);
+  const inspectionFrame = useRef<number | null>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const [focusRequest, setFocusRequest] = useState<{ nodeId: string; requestId: number }>();
   const inspectorTitle = useRef<HTMLHeadingElement>(null);
   const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const narrow = useMediaQuery("(max-width: 760px)");
@@ -78,9 +84,45 @@ export function DispatchLab({ blueprint, redactPrivate }: Props) {
     [model.flows, selectedNode],
   );
 
+  useLayoutEffect(() => {
+    pause();
+  }, [pauseRequest, pause]);
+
+  useEffect(() => () => {
+    if (inspectionFrame.current !== null) cancelAnimationFrame(inspectionFrame.current);
+  }, []);
+
+  useLayoutEffect(() => {
+    if (selectedNode || !pendingFocusRestore.current) return;
+    pendingFocusRestore.current = false;
+    const target = returnFocus.current?.element;
+    if (target?.isConnected && "focus" in target && typeof target.focus === "function") target.focus();
+    else viewportRef.current?.focus();
+  }, [selectedNode]);
+
+  function clearInspection() {
+    if (inspectionFrame.current !== null) {
+      cancelAnimationFrame(inspectionFrame.current);
+      inspectionFrame.current = null;
+    }
+    setSelectedNodeId(null);
+    setFocusRequest(undefined);
+  }
+
+  function revealWalkthrough() {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const bounds = viewport.getBoundingClientRect();
+    const visibleHeight = Math.max(0, Math.min(bounds.bottom, window.innerHeight) - Math.max(bounds.top, 0));
+    if (visibleHeight < Math.min(bounds.height, window.innerHeight) * 0.85) {
+      viewport.scrollIntoView({ block: "center", behavior: "instant" });
+      viewport.focus({ preventScroll: true });
+    }
+  }
+
   function chooseFlow(id: string) {
     playback.reset();
-    setSelectedNodeId(null);
+    clearInspection();
     const selected = model.flows.find((flow) => flow.id === id);
     if (id !== ALL_FLOWS && !selected) {
       setSelectedFlow(ALL_FLOWS);
@@ -98,7 +140,7 @@ export function DispatchLab({ blueprint, redactPrivate }: Props) {
     if (flowId !== ALL_FLOWS && !filterFlows(model.flows, blueprint.tags, query).some((flow) => flow.id === flowId)) {
       playback.reset();
       setSelectedFlow(ALL_FLOWS);
-      setSelectedNodeId(null);
+      clearInspection();
     }
   }
 
@@ -108,42 +150,59 @@ export function DispatchLab({ blueprint, redactPrivate }: Props) {
       return;
     }
     const focused = document.activeElement;
-    if (!focused?.closest(".component-panel")) returnFocus.current = focused;
+    if (!focused?.closest(".component-panel")) {
+      returnFocus.current = {
+        element: focused,
+        stageNodeId: focused?.closest('[data-testid="dispatch-stage"]') ? id : null,
+      };
+    }
     pause();
     if (!nodes.some((node) => node.id === id)) setSelectedFlow(ALL_FLOWS);
     setSelectedNodeId(id);
     setChosenView("follow");
-    requestAnimationFrame(() => inspectorTitle.current?.focus({ preventScroll: !narrow }));
+    if (inspectionFrame.current !== null) cancelAnimationFrame(inspectionFrame.current);
+    inspectionFrame.current = requestAnimationFrame(() => {
+      inspectionFrame.current = null;
+      inspectorTitle.current?.focus({ preventScroll: !narrow });
+    });
   }, [model.nodes, nodes, pause, narrow]);
 
   function closeInspector() {
-    setSelectedNodeId(null);
-    const target = returnFocus.current;
-    if (target?.isConnected && "focus" in target && typeof target.focus === "function") target.focus();
-    else document.querySelector<HTMLSelectElement>('[data-testid="flow-selector"]')?.focus();
+    clearInspection();
+    const nodeId = returnFocus.current?.stageNodeId;
+    if (presentation === "lab" && nodeId && nodes.some((node) => node.id === nodeId)) {
+      pendingFocusRestore.current = false;
+      setFocusRequest({ nodeId, requestId: ++focusSequence.current });
+    } else {
+      pendingFocusRestore.current = true;
+    }
   }
 
   function switchPresentation(next: "lab" | "diagram") {
     playback.pause();
+    setFocusRequest(undefined);
     setPresentation(next);
   }
 
   function startFlow() {
-    setSelectedNodeId(null);
+    clearInspection();
+    revealWalkthrough();
     setPresentation("lab");
     setChosenView("follow");
     playback.playFlow();
   }
 
   function playHandoff(index?: number) {
-    setSelectedNodeId(null);
+    clearInspection();
+    revealWalkthrough();
     setPresentation("lab");
     setChosenView("follow");
     playback.playStep(index);
   }
 
   function moveHandoff(direction: "next" | "previous") {
-    setSelectedNodeId(null);
+    clearInspection();
+    revealWalkthrough();
     setPresentation("lab");
     setChosenView("follow");
     playback[direction]();
@@ -182,7 +241,9 @@ export function DispatchLab({ blueprint, redactPrivate }: Props) {
           <button aria-pressed={presentation === "lab"} onClick={() => switchPresentation("lab")}>Lab</button>
           <button aria-pressed={presentation === "diagram"} onClick={() => switchPresentation("diagram")}>Diagram</button>
         </div>
-        <details className="agent-purpose">
+        <details className="agent-purpose" onToggle={(event) => {
+          if (event.currentTarget.open) pause();
+        }}>
           <summary>What does {model.project} do?</summary>
           <div><p>{model.summary}</p>{blueprint.tags?.length ? <p className="agent-tags">{blueprint.tags.join(" · ")}</p> : null}{blueprint.stack?.length ? <p><strong>Declared stack:</strong> {blueprint.stack.join(", ")}</p> : null}</div>
         </details>
@@ -200,7 +261,7 @@ export function DispatchLab({ blueprint, redactPrivate }: Props) {
       ) : null}
 
       <div className={`lab-frame${selectedNode ? " inspecting" : ""}`}>
-        <div className="lab-viewport">
+        <div className="lab-viewport" ref={viewportRef} tabIndex={-1} aria-label="Illustrative lab viewport">
           {presentation === "lab" ? (
             <DispatchStage
               project={model.project}
@@ -216,6 +277,8 @@ export function DispatchLab({ blueprint, redactPrivate }: Props) {
               reducedMotion={reducedMotion}
               showContextCaption={false}
               onSelectNode={inspectNode}
+              onFocusNode={pause}
+              focusRequest={focusRequest}
             />
           ) : (
             <Suspense fallback={<div className="diagram-loading" role="status">Loading the technical diagram…</div>}>
@@ -319,7 +382,9 @@ export function DispatchLab({ blueprint, redactPrivate }: Props) {
         </div>
       </section>
 
-      <details className="flow-outline">
+      <details className="flow-outline" onToggle={(event) => {
+        if (event.currentTarget.open) pause();
+      }}>
         <summary>{activeFlow ? `Read the handoff outline · ${activeFlow.steps.length} steps` : `Browse the visible flows · ${model.flows.length}`}</summary>
         {activeFlow ? (
           <ol className="step-outline">

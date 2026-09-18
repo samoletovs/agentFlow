@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { NodeKind } from "../lib/blueprint";
 import type { DispatchFlow, DispatchNode, DispatchStageProps } from "../lib/dispatchTypes";
+import { DISPATCH_LABEL_MAX_WIDTH, estimateDispatchLabelWidth } from "../lib/dispatchLayout";
 import { DispatchStage } from "./DispatchStage";
 
 const kinds: readonly NodeKind[] = ["channel", "trigger", "compute", "agent", "tool", "data", "secret", "job", "repo", "pwa"];
@@ -65,7 +66,11 @@ describe("DispatchStage static and server rendering", () => {
       detail: "PRIVATE_DETAIL_SENTINEL", resource: "PRIVATE_RESOURCE_SENTINEL",
       url: "https://example.invalid/PRIVATE_URL_SENTINEL", private: true, restricted: true,
     };
-    const html = render({ nodes: [sealed], flows: [], activeStep: null, selectedNodeId: sealed.id });
+    const html = render({
+      nodes: [sealed], flows: [], activeStep: null, selectedNodeId: sealed.id,
+      focusRequest: { nodeId: sealed.id, requestId: 1 },
+      onFocusNode: () => { throw new Error("Server rendering must not move focus."); },
+    });
     expect(html).toContain("Restricted component");
     expect(html).toContain("Sealed private component");
     expect(html).toContain('data-kind="restricted"');
@@ -74,6 +79,33 @@ describe("DispatchStage static and server rendering", () => {
     expect(html).not.toContain("example.invalid");
     const publicNode = { ...sealed, id: "public", label: "Public repo", private: false, restricted: false };
     expect(render({ nodes: [publicNode], flows: [], activeStep: null })).not.toContain("PRIVATE_");
+  });
+
+  it("bounds wide captions while keeping the full title and accessible label", () => {
+    const label = "W".repeat(50);
+    const html = render({
+      nodes: [{ ...nodes[0], label }, { ...nodes[1], label }],
+      flows: [], activeStep: null,
+    });
+    expect(html.match(new RegExp(`<title>${label}</title>`, "g"))).toHaveLength(2);
+    expect(html.match(new RegExp(`aria-label="${label}\\.`, "g"))).toHaveLength(2);
+    const lines = [...html.matchAll(/<tspan[^>]*>([^<]*)<\/tspan>/g)].map((match) => match[1]);
+    expect(lines).toHaveLength(4);
+    for (const line of lines) expect(estimateDispatchLabelWidth(line)).toBeLessThanOrEqual(DISPATCH_LABEL_MAX_WIDTH);
+    expect(html).not.toContain("textLength=");
+    expect(html).not.toContain("lengthAdjust=");
+  });
+
+  it("keeps offscreen mechanisms in the follow-view tab order without serializing focus requests", () => {
+    const html = render({
+      viewMode: "follow",
+      focusRequest: { nodeId: nodes[9].id, requestId: 4 },
+      onFocusNode: () => { throw new Error("Focus callbacks run only after an actual focus event."); },
+    });
+    expect(html.match(/tabindex="0"/g)).toHaveLength(10);
+    expect(html).not.toContain("requestId");
+    expect(html).not.toContain(nodes[9].id);
+    expect(html).toContain('data-step-index="0"');
   });
 
   it("escapes supplied public text instead of injecting SVG or HTML", () => {
