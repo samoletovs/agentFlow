@@ -1,5 +1,9 @@
 # agentFlow — Agent Instructions
 
+Feedback triage uses `gpt-6-luna` on the existing personal-agents Azure account,
+with reasoning disabled and a 300-token output ceiling. The visualizer itself
+still has no embedded LLM.
+
 > Project-specific instructions for AI coding agents.
 
 ## Project type
