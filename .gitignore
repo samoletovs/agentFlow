@@ -24,3 +24,7 @@ playwright-report/
 
 # OS
 Thumbs.db
+
+# Added by autopilot
+*.png
+screenshots/
