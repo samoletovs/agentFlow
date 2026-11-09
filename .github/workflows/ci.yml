@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npx tsc -p tsconfig.json --noEmit && npx tsc -p tsconfig.node.json --noEmit
+
+      - name: Test
+        run: npm test
+
+      - name: Validate blueprints
+        run: npm run validate-blueprints
+
+      - name: Build frontend
+        run: npm run build
