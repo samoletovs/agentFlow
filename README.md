@@ -82,6 +82,28 @@ message and retry action. A single ten-second deadline covers both the access
 request and its response body, so a stalled check can be retried. The client-side
 allowlist remains in `src/App.tsx`.
 
+## Add a blueprint
+
+From the repository root, replace the example details and run:
+
+```bash
+npm run create-blueprint -- --project sampleAgent --agent "Sample agent" --summary "Handles requests." --from-id input --from-kind channel --from-label "Input" --to-id worker --to-kind agent --to-label "Worker" --flow-id request --flow-label "Handle request"
+```
+
+The command writes `src/blueprints/sampleAgent.json` with two nodes and one
+connected flow, then runs the existing blueprint validator. It refuses to
+overwrite an existing file and removes the new file if validation fails. Use
+`npm run create-blueprint -- --help` for the supported node kinds, ID formats,
+and privacy flags. Supply real architectural details: the starter does not
+infer them. Extend the JSON to describe the rest of the system, marking nodes
+and flows that touch personal data as private. Redaction is cosmetic; never
+put secrets or real telemetry in a blueprint.
+
+To make the blueprint visible, add
+`import sampleAgentRaw from "./blueprints/sampleAgent.json";` to `src/App.tsx`
+and add `sampleAgentRaw` to its `BLUEPRINTS` array. After editing, run
+`npm run validate-blueprints` and visually check the layout with `npm run dev`.
+
 Before submitting a change:
 
 ```powershell
