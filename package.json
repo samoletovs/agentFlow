@@ -14,6 +14,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "validate-blueprints": "tsx scripts/validate-blueprints.ts",
+    "create-blueprint": "tsx scripts/create-blueprint.ts",
     "test": "vitest run"
   },
   "dependencies": {
