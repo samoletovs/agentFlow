@@ -70,14 +70,30 @@ swa start ../dist --api-location . --run "npm run dev --prefix .."
 
 ## Adding a new blueprint
 
-1. Create `src/blueprints/<project>.json` matching the v1 schema.
-2. Add the import in `src/App.tsx` `BLUEPRINTS` array.
-3. `npm run validate-blueprints` — must pass.
+1. Generate a starter from the repository root (replace the example details):
+
+   ```bash
+   npm run create-blueprint -- --project sampleAgent --agent "Sample agent" --summary "Handles requests." --from-id input --from-kind channel --from-label "Input" --to-id worker --to-kind agent --to-label "Worker" --flow-id request --flow-label "Handle request" --source-repo samoletovs/sampleAgent --source-path .
+   ```
+
+   This writes `src/blueprints/sampleAgent.json`, adds its entry to
+   `src/blueprints/manifest.json`, and runs the existing validator. For a
+   private source use `--source-private` instead of `--source-repo` and
+   `--source-path`. It will not overwrite a file, and it removes both changes
+   if validation fails. Run `npm run create-blueprint -- --help` for
+   the input and privacy options. Describe the actual architecture yourself;
+   the starter does not infer it. Edit and extend the generated nodes and flows,
+   marking personal-data nodes and flows private as appropriate.
+2. In `src/App.tsx`, import the JSON (for example,
+   `import sampleAgentRaw from "./blueprints/sampleAgent.json";`) and add
+   `sampleAgentRaw` to the `BLUEPRINTS` array.
+3. `npm run validate-blueprints` — must pass after edits.
 4. `npm run dev` — visually verify the layout. If a node is in the wrong
    column, the cause is almost always a missing inbound edge.
 
 Every blueprint must also have an entry in `src/blueprints/manifest.json`
-(add it before step 3): `file`, the expected `project`, and its `source`. A
+(the generator adds it; add it yourself for a hand-written blueprint): `file`,
+the expected `project`, and its `source`. A
 public source is `{"repository": "<owner>/<repo>", "path": "<path>"}`, with
 `"."` for the repository root. Record a private source only as
 `{"repository": "private"}`, without its repository name or path.
