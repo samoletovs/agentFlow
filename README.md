@@ -88,12 +88,15 @@ allowlist remains in `src/App.tsx`.
 From the repository root, replace the example details and run:
 
 ```bash
-npm run create-blueprint -- --project sampleAgent --agent "Sample agent" --summary "Handles requests." --from-id input --from-kind channel --from-label "Input" --to-id worker --to-kind agent --to-label "Worker" --flow-id request --flow-label "Handle request"
+npm run create-blueprint -- --project sampleAgent --agent "Sample agent" --summary "Handles requests." --from-id input --from-kind channel --from-label "Input" --to-id worker --to-kind agent --to-label "Worker" --flow-id request --flow-label "Handle request" --source-repo samoletovs/sampleAgent --source-path .
 ```
 
 The command writes `src/blueprints/sampleAgent.json` with two nodes and one
-connected flow, then runs the existing blueprint validator. It refuses to
-overwrite an existing file and removes the new file if validation fails. Use
+connected flow, lists it in `src/blueprints/manifest.json`, then runs the
+existing blueprint validator. For a private source, replace `--source-repo`
+and `--source-path` with `--source-private`, which records no repository name
+or path. It refuses to overwrite an existing file and removes the new file and
+its manifest entry if validation fails. Use
 `npm run create-blueprint -- --help` for the supported node kinds, ID formats,
 and privacy flags. Supply real architectural details: the starter does not
 infer them. Extend the JSON to describe the rest of the system, marking nodes

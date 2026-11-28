@@ -14,6 +14,13 @@ const args = [
   "--to-id", "worker", "--to-kind", "agent", "--to-label", "Worker",
   "--flow-id", "request", "--flow-label", "Handle request",
 ];
+const publicSource = ["--source-repo", "example/sample-agent", "--source-path", "."];
+const existingEntry = { file: "other.json", project: "other", source: { repository: "private" } };
+const otherBlueprint = {
+  version: "1.0", project: "other", agent: "Other", summary: "Another agent.",
+  nodes: [{ id: "input", kind: "channel", label: "Input" }, { id: "worker", kind: "agent", label: "Worker" }],
+  flows: [{ id: "request", label: "Handle request", steps: [{ from: "input", to: "worker" }] }],
+};
 
 describe("blueprint starter", { timeout: 15_000 }, () => {
   let directory: string;
@@ -41,7 +48,7 @@ describe("blueprint starter", { timeout: 15_000 }, () => {
   }
 
   it("creates and validates a connected blueprint with the supplied details", () => {
-    const result = run([...args, "--to-private", "--flow-private"]);
+    const result = run([...args, ...publicSource, "--to-private", "--flow-private"]);
     expect(result.status, result.stderr).toBe(0);
     expect(result.stdout).toContain("1 blueprint(s) validated");
     expect(JSON.parse(readFileSync(destination, "utf8"))).toEqual({
@@ -56,7 +63,7 @@ describe("blueprint starter", { timeout: 15_000 }, () => {
 
   it("does not overwrite an existing blueprint", () => {
     writeFileSync(destination, "original");
-    expect(run(args).status).not.toBe(0);
+    expect(run([...args, ...publicSource]).status).not.toBe(0);
     expect(readFileSync(destination, "utf8")).toBe("original");
   });
 
@@ -66,23 +73,76 @@ describe("blueprint starter", { timeout: 15_000 }, () => {
     ["invalid node kind", ["--to-kind", "invalid"]],
     ["invalid flow ID", ["--flow-id", "Invalid"]],
     ["oversized summary", ["--summary", "a".repeat(281)]],
+    ["missing source", ["--source-repo", "", "--source-path", ""]],
+    ["invalid source repository", ["--source-repo", "not a repo"]],
+    ["private source with a repository name", ["--source-private"]],
   ])("rejects %s without leaving a blueprint", (_description, overrides) => {
-    const result = run([...args, ...overrides]);
+    const result = run([...args, ...publicSource, ...overrides]);
     expect(result.status).not.toBe(0);
     expect(existsSync(destination)).toBe(false);
   });
 
   it("removes the new file when an existing blueprint fails validation", () => {
     writeFileSync(join(directory, "src", "blueprints", "bad.json"), "{}");
-    const result = run(args);
+    const result = run([...args, ...publicSource]);
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain("Validation failed");
     expect(existsSync(destination)).toBe(false);
   });
 
+  describe("with a source manifest", () => {
+    let manifestPath: string;
+    let originalManifest: string;
+
+    beforeEach(() => {
+      manifestPath = join(directory, "src", "blueprints", "manifest.json");
+      writeFileSync(join(directory, "src", "blueprints", "other.json"), JSON.stringify(otherBlueprint));
+      originalManifest = `${JSON.stringify({ blueprints: [existingEntry] }, null, 2)}\n`;
+      writeFileSync(manifestPath, originalManifest);
+    });
+
+    const manifest = () => JSON.parse(readFileSync(manifestPath, "utf8"));
+
+    it("lists a public source so the manifest check passes", () => {
+      const result = run([...args, ...publicSource]);
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.stdout).toContain("manifest.json lists all 2 blueprint(s)");
+      expect(manifest().blueprints).toEqual([
+        existingEntry,
+        { file: "sampleAgent.json", project: "sampleAgent", source: { repository: "example/sample-agent", path: "." } },
+      ]);
+    });
+
+    it("records a private source without its repository name or path", () => {
+      const result = run([...args, "--source-private"]);
+      expect(result.status, result.stderr).toBe(0);
+      expect(manifest().blueprints[1]).toEqual({
+        file: "sampleAgent.json", project: "sampleAgent", source: { repository: "private" },
+      });
+    });
+
+    it("restores the manifest when validation fails", () => {
+      writeFileSync(join(directory, "src", "blueprints", "bad.json"), "{}");
+      const result = run([...args, ...publicSource]);
+      expect(result.status).not.toBe(0);
+      expect(existsSync(destination)).toBe(false);
+      expect(readFileSync(manifestPath, "utf8")).toBe(originalManifest);
+    });
+
+    it("refuses a project the manifest already lists", () => {
+      writeFileSync(manifestPath, JSON.stringify({ blueprints: [existingEntry, { ...existingEntry, file: "sampleAgent.json" }] }));
+      const before = readFileSync(manifestPath, "utf8");
+      const result = run([...args, ...publicSource]);
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain("already lists sampleAgent.json");
+      expect(existsSync(destination)).toBe(false);
+      expect(readFileSync(manifestPath, "utf8")).toBe(before);
+    });
+  });
+
   it("reports missing input and help without writing files", () => {
     expect(run([]).stderr).toContain("Missing or empty --project");
-    expect(run(["--help"]).stdout).toContain("--from-id");
+    expect(run(["--help"]).stdout).toContain("--source-private");
     expect(existsSync(destination)).toBe(false);
   });
 });

@@ -73,11 +73,14 @@ swa start ../dist --api-location . --run "npm run dev --prefix .."
 1. Generate a starter from the repository root (replace the example details):
 
    ```bash
-   npm run create-blueprint -- --project sampleAgent --agent "Sample agent" --summary "Handles requests." --from-id input --from-kind channel --from-label "Input" --to-id worker --to-kind agent --to-label "Worker" --flow-id request --flow-label "Handle request"
+   npm run create-blueprint -- --project sampleAgent --agent "Sample agent" --summary "Handles requests." --from-id input --from-kind channel --from-label "Input" --to-id worker --to-kind agent --to-label "Worker" --flow-id request --flow-label "Handle request" --source-repo samoletovs/sampleAgent --source-path .
    ```
 
-   This writes `src/blueprints/sampleAgent.json` and runs the existing validator.
-   It will not overwrite a file. Run `npm run create-blueprint -- --help` for
+   This writes `src/blueprints/sampleAgent.json`, adds its entry to
+   `src/blueprints/manifest.json`, and runs the existing validator. For a
+   private source use `--source-private` instead of `--source-repo` and
+   `--source-path`. It will not overwrite a file, and it removes both changes
+   if validation fails. Run `npm run create-blueprint -- --help` for
    the input and privacy options. Describe the actual architecture yourself;
    the starter does not infer it. Edit and extend the generated nodes and flows,
    marking personal-data nodes and flows private as appropriate.
@@ -89,7 +92,8 @@ swa start ../dist --api-location . --run "npm run dev --prefix .."
    column, the cause is almost always a missing inbound edge.
 
 Every blueprint must also have an entry in `src/blueprints/manifest.json`
-(add it before step 3): `file`, the expected `project`, and its `source`. A
+(the generator adds it; add it yourself for a hand-written blueprint): `file`,
+the expected `project`, and its `source`. A
 public source is `{"repository": "<owner>/<repo>", "path": "<path>"}`, with
 `"."` for the repository root. Record a private source only as
 `{"repository": "private"}`, without its repository name or path.
