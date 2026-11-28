@@ -91,32 +91,55 @@ describe("blueprint starter", { timeout: 15_000 }, () => {
   });
 
   describe("with a source manifest", () => {
+    const listedOther = `{
+  "blueprints": [
+    {
+      "file": "other.json",
+      "project": "other",
+      "source": { "repository": "private" }
+    }
+  ]
+}
+`;
     let manifestPath: string;
-    let originalManifest: string;
 
     beforeEach(() => {
       manifestPath = join(directory, "src", "blueprints", "manifest.json");
       writeFileSync(join(directory, "src", "blueprints", "other.json"), JSON.stringify(otherBlueprint));
-      originalManifest = `${JSON.stringify({ blueprints: [existingEntry] }, null, 2)}\n`;
-      writeFileSync(manifestPath, originalManifest);
+      writeFileSync(manifestPath, listedOther);
     });
 
-    const manifest = () => JSON.parse(readFileSync(manifestPath, "utf8"));
+    const manifestText = () => readFileSync(manifestPath, "utf8");
 
-    it("lists a public source so the manifest check passes", () => {
-      const result = run([...args, ...publicSource]);
-      expect(result.status, result.stderr).toBe(0);
-      expect(result.stdout).toContain("manifest.json lists all 2 blueprint(s)");
-      expect(manifest().blueprints).toEqual([
-        existingEntry,
-        { file: "sampleAgent.json", project: "sampleAgent", source: { repository: "example/sample-agent", path: "." } },
-      ]);
-    });
+    it.each([["LF", "\n"], ["CRLF", "\r\n"]])(
+      "appends only the new entry to a %s manifest so the manifest check passes",
+      (_name, eol) => {
+        writeFileSync(manifestPath, listedOther.replace(/\n/g, eol));
+        const result = run([...args, ...publicSource]);
+        expect(result.status, result.stderr).toBe(0);
+        expect(result.stdout).toContain("manifest.json lists all 2 blueprint(s)");
+        expect(manifestText()).toBe(`{
+  "blueprints": [
+    {
+      "file": "other.json",
+      "project": "other",
+      "source": { "repository": "private" }
+    },
+    {
+      "file": "sampleAgent.json",
+      "project": "sampleAgent",
+      "source": { "repository": "example/sample-agent", "path": "." }
+    }
+  ]
+}
+`.replace(/\n/g, eol));
+      },
+    );
 
     it("records a private source without its repository name or path", () => {
       const result = run([...args, "--source-private"]);
       expect(result.status, result.stderr).toBe(0);
-      expect(manifest().blueprints[1]).toEqual({
+      expect(JSON.parse(manifestText()).blueprints[1]).toEqual({
         file: "sampleAgent.json", project: "sampleAgent", source: { repository: "private" },
       });
     });
@@ -125,18 +148,24 @@ describe("blueprint starter", { timeout: 15_000 }, () => {
       writeFileSync(join(directory, "src", "blueprints", "bad.json"), "{}");
       const result = run([...args, ...publicSource]);
       expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain("Validation failed");
       expect(existsSync(destination)).toBe(false);
-      expect(readFileSync(manifestPath, "utf8")).toBe(originalManifest);
+      expect(manifestText()).toBe(listedOther);
     });
 
-    it("refuses a project the manifest already lists", () => {
-      writeFileSync(manifestPath, JSON.stringify({ blueprints: [existingEntry, { ...existingEntry, file: "sampleAgent.json" }] }));
-      const before = readFileSync(manifestPath, "utf8");
+    it.each([
+      ["a manifest-level key it would drop", { $schema: "manifest.schema.json", blueprints: [existingEntry] }],
+      ["an entry key it would drop", { blueprints: [{ ...existingEntry, notes: "keep me" }] }],
+      ["a null entry", { blueprints: [existingEntry, null] }],
+      ["an entry without a source", { blueprints: [{ file: "other.json", project: "other" }] }],
+      ["the new file already listed", { blueprints: [existingEntry, { ...existingEntry, file: "sampleAgent.json" }] }],
+    ])("refuses a manifest with %s and writes nothing", (_description, content) => {
+      const before = JSON.stringify(content);
+      writeFileSync(manifestPath, before);
       const result = run([...args, ...publicSource]);
       expect(result.status).not.toBe(0);
-      expect(result.stderr).toContain("already lists sampleAgent.json");
       expect(existsSync(destination)).toBe(false);
-      expect(readFileSync(manifestPath, "utf8")).toBe(before);
+      expect(manifestText()).toBe(before);
     });
   });
 
