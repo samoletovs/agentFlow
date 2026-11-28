@@ -11,7 +11,8 @@ illegible to the human responsible for supervising it.
 
 ## What it does
 
-- Validates agent blueprints against a versioned JSON schema.
+- Validates agent blueprints against a versioned JSON schema and a checked-in
+  manifest of their sources (`src/blueprints/manifest.json`).
 - Renders an original cel-illustrated lab, with reusable mechanisms for each
   component kind and a precise React Flow diagram as an alternative view.
 - Plays declared handoffs individually or as a controllable walkthrough.

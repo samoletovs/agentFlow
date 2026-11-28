@@ -181,19 +181,82 @@ describe("blueprint validation gate", { timeout: 15_000 }, () => {
     rmSync(directory, { recursive: true, force: true });
   });
 
-  function writeFixture(data: typeof fixture) {
-    writeFileSync(join(directory, "src", "blueprints", "sample.json"), JSON.stringify(data));
+  function writeFixture(data: typeof fixture, file = "sample.json") {
+    writeFileSync(join(directory, "src", "blueprints", file), JSON.stringify(data));
   }
 
-  it("validates every shipped blueprint", () => {
+  function writeManifest(blueprints: unknown[]) {
+    writeFileSync(join(directory, "src", "blueprints", "manifest.json"), JSON.stringify({ blueprints }));
+  }
+
+  const sampleEntry = {
+    file: "sample.json",
+    project: "sampleAgent",
+    source: { repository: "example/sample-agent", path: "agent" },
+  };
+
+  it("validates every shipped blueprint against the manifest", () => {
     const result = validate(root);
     expect(result.status, result.stderr).toBe(0);
     expect(result.stdout).toMatch(/[1-9]\d* blueprint\(s\) validated/);
+    expect(result.stdout).toMatch(/manifest\.json lists all [1-9]\d* blueprint\(s\)/);
   });
 
   it("accepts a schema-valid blueprint with resolvable flow steps", () => {
     writeFixture(fixture);
-    expect(validate(directory).status).toBe(0);
+    const result = validate(directory);
+    expect(result.status).toBe(0);
+    expect(result.stderr).toContain("src/blueprints/manifest.json not found");
+  });
+
+  it("accepts blueprints that match the manifest, including a private source", () => {
+    writeFixture(fixture);
+    writeFixture({ ...fixture, project: "privateAgent" }, "private.json");
+    writeManifest([sampleEntry, { file: "private.json", project: "privateAgent", source: { repository: "private" } }]);
+    const result = validate(directory);
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toContain("manifest.json lists all 2 blueprint(s)");
+    expect(result.stdout).not.toContain("manifest.json  (");
+  });
+
+  it("rejects a manifest entry whose blueprint file is missing", () => {
+    writeFixture(fixture);
+    writeManifest([sampleEntry, { file: "gone.json", project: "goneAgent", source: { repository: "private" } }]);
+    const result = validate(directory);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("manifest.json lists gone.json, but src/blueprints/gone.json does not exist");
+  });
+
+  it("rejects a blueprint file that the manifest does not list", () => {
+    writeFixture(fixture);
+    writeFixture({ ...fixture, project: "otherAgent" }, "other.json");
+    writeManifest([sampleEntry]);
+    const result = validate(directory);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("other.json is not listed in src/blueprints/manifest.json");
+    expect(result.stderr).toContain('"project": "otherAgent"');
+  });
+
+  it("rejects a blueprint whose project does not match its manifest entry", () => {
+    writeFixture({ ...fixture, project: "renamedAgent" });
+    writeManifest([sampleEntry]);
+    const result = validate(directory);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("sample.json: project 'renamedAgent' does not match manifest project 'sampleAgent'");
+  });
+
+  it.each([
+    ["a duplicate entry", [sampleEntry, sampleEntry], "lists sample.json more than once"],
+    ["an entry without a project", [{ file: "sample.json", source: sampleEntry.source }], "needs string 'file' and 'project'"],
+    ["a private source with a path", [{ ...sampleEntry, source: { repository: "private", path: "agent" } }], "a private source must be exactly"],
+    ["a public source without a path", [{ ...sampleEntry, source: { repository: "example/sample-agent" } }], "source must be"],
+    ["a malformed repository", [{ ...sampleEntry, source: { repository: "sample-agent", path: "agent" } }], "source must be"],
+  ])("rejects a manifest with %s", (_description, entries, message) => {
+    writeFixture(fixture);
+    writeManifest(entries);
+    const result = validate(directory);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(message);
   });
 
   it("rejects an unsupported schema version", () => {

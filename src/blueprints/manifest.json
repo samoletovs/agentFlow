@@ -1,0 +1,34 @@
+{
+  "blueprints": [
+    {
+      "file": "agentMode.json",
+      "project": "agentMode",
+      "source": { "repository": "private" }
+    },
+    {
+      "file": "atlas.json",
+      "project": "atlas",
+      "source": { "repository": "samoletovs/atlas", "path": "." }
+    },
+    {
+      "file": "autoRefine.json",
+      "project": "autoRefine",
+      "source": { "repository": "samoletovs/autoRefine", "path": "agent" }
+    },
+    {
+      "file": "foundryLab.json",
+      "project": "foundryLab",
+      "source": { "repository": "samoletovs/foundryLab", "path": "agents/labMemoryAgent" }
+    },
+    {
+      "file": "mindMe.json",
+      "project": "mindMe",
+      "source": { "repository": "samoletovs/mindMe", "path": "." }
+    },
+    {
+      "file": "turgo.json",
+      "project": "turgo",
+      "source": { "repository": "samoletovs/turgo", "path": "." }
+    }
+  ]
+}
