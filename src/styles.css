@@ -207,7 +207,8 @@ h1, h2, h3, .site-brand, .agent-option-name strong {
 .bp-node.dim { opacity: .28; }
 .lab-viewport .react-flow__handle { width: 6px; height: 6px; background: var(--lab-steel); border-color: var(--lab-paper); }
 .lab-viewport .react-flow__controls { box-shadow: 0 4px 12px #24343d20; }
-.lab-viewport .react-flow__controls-button { width: 40px; height: 40px; min-height: 40px; color: var(--lab-ink); background: var(--lab-paper); border-color: var(--lab-line); border-radius: 0; }
+/* React Flow 13 ships its styles in @layer xyflow, so the global button rules above win unless restated here. */
+.lab-viewport .react-flow__controls-button { width: 40px; height: 40px; min-height: 40px; padding: 4px; color: var(--lab-ink); background: var(--lab-paper); border-width: 0 0 1px; border-color: var(--lab-line); border-radius: 0; }
 .lab-viewport .react-flow__controls-button svg { fill: currentColor; }
 .lab-viewport .empty { display: grid; place-items: center; height: 100%; padding: 30px; text-align: center; }
 .diagram-loading { display: grid; place-items: center; height: 100%; padding: 24px; color: var(--lab-muted); }

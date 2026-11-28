@@ -2,8 +2,13 @@
 // We feed dagre the visible nodes + edges and let it compute (x, y) positions
 // that balance width and avoid the naive single-column stack we used before.
 
+import type { FitViewOptions } from "@xyflow/react";
 import dagre from "dagre";
 import type { BlueprintNode, BlueprintFlow } from "./blueprint";
+
+// React Flow 13 reads a unitless padding as pixels. 7.6% per side matches the
+// legacy `padding: 0.18` the canvas used with React Flow 12.
+export const FIT_VIEW_OPTIONS = { padding: "7.6%" } as const satisfies FitViewOptions;
 
 export interface LaidOutNode extends BlueprintNode {
   x: number;
