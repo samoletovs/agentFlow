@@ -22,7 +22,7 @@ also required in PR CI. Deployment uploads prebuilt `dist/` with the root
 ```bash
 npm install
 npm run dev                  # Vite — http://localhost:5173
-npm run validate-blueprints  # ajv schema check + referential integrity
+npm run validate-blueprints  # ajv schema check + referential integrity + manifest coverage
 npm run typecheck
 npm run lint
 npm run build                # production build to dist/
@@ -75,6 +75,14 @@ swa start ../dist --api-location . --run "npm run dev --prefix .."
 3. `npm run validate-blueprints` — must pass.
 4. `npm run dev` — visually verify the layout. If a node is in the wrong
    column, the cause is almost always a missing inbound edge.
+
+Every blueprint must also have an entry in `src/blueprints/manifest.json`
+(add it before step 3): `file`, the expected `project`, and its `source`. A
+public source is `{"repository": "<owner>/<repo>", "path": "<path>"}`, with
+`"."` for the repository root. Record a private source only as
+`{"repository": "private"}`, without its repository name or path.
+The validator fails on unlisted files, listed files that do not exist and
+project mismatches.
 
 ## Off-path deviations
 
