@@ -15,7 +15,7 @@ import type {
   BlueprintFlow,
   BlueprintNode,
 } from "../lib/blueprint";
-import { layoutNodes } from "../lib/layout";
+import { FIT_VIEW_OPTIONS, layoutNodes } from "../lib/layout";
 import "@xyflow/react/dist/style.css";
 
 const FLOW_COLORS = [
@@ -198,15 +198,16 @@ export function BlueprintCanvas({
       nodes={rfNodes}
       edges={rfEdges}
       nodeTypes={nodeTypes}
+      forceColorMode="light"
       fitView
-      fitViewOptions={{ padding: 0.18 }}
+      fitViewOptions={FIT_VIEW_OPTIONS}
       minZoom={0.1}
       maxZoom={1.5}
       onInit={(instance) => {
         // ReactFlow's initial fitView can fire before the container has
         // stable dimensions (toolbar reflow, banner mount). Re-fit on the
         // next animation frame to guarantee the graph is centred.
-        requestAnimationFrame(() => instance.fitView({ padding: 0.18 }));
+        requestAnimationFrame(() => instance.fitView(FIT_VIEW_OPTIONS));
       }}
       proOptions={{ hideAttribution: true }}
       defaultEdgeOptions={{ animated: animateEdges }}
